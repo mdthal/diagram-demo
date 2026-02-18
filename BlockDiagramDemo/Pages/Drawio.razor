@@ -1,0 +1,138 @@
+@page "/drawio"
+
+<PageTitle>Draw.io</PageTitle>
+
+<h1>Draw.io</h1>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <span class="badge text-bg-dark">@_status</span>
+</div>
+
+<div class="row g-3">
+    <div class="col-12 col-xl-8">
+        <div class="border rounded p-2">
+            <DrawioEditor @ref="_editor"
+                          InitialXml="@_xml"
+                          Autosaved="HandleAutosave"
+                          Saved="HandleSave"
+                          Exported="HandleExport"
+                          Exited="HandleExit"
+                          ClassName="drawio-frame" />
+        </div>
+    </div>
+    <div class="col-12 col-xl-4">
+        <label class="form-label fw-semibold">Current XML</label>
+        <textarea class="form-control font-monospace drawio-xml" readonly>@_xml</textarea>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_pngDataUri))
+{
+    <div class="mt-3">
+        <label class="form-label fw-semibold">Latest PNG Export</label>
+        <div class="border rounded p-2 bg-light-subtle">
+            <img src="@_pngDataUri" alt="draw.io export preview" class="img-fluid" />
+        </div>
+    </div>
+}
+
+@code {
+    private DrawioEditor? _editor;
+    private string _status = "Waiting for editor";
+    private string _xml = SampleXml;
+    private string? _pngDataUri;
+
+    private const string SampleXml = """
+        <mxfile host="app.diagrams.net" modified="2026-02-10T00:00:00.000Z" agent="BlockDiagramDemo" version="22.1.0">
+          <diagram id="rel-test" name="Relationship Test">
+            <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+              <root>
+                <mxCell id="0" />
+                <mxCell id="1" parent="0" />
+                <mxCell id="u1" value="User" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+                  <mxGeometry x="80" y="140" width="160" height="70" as="geometry" />
+                </mxCell>
+                <mxCell id="p1" value="Project" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="1">
+                  <mxGeometry x="340" y="140" width="160" height="70" as="geometry" />
+                </mxCell>
+                <mxCell id="t1" value="TaskItem" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1">
+                  <mxGeometry x="600" y="140" width="160" height="70" as="geometry" />
+                </mxCell>
+                <mxCell id="e1" value="owns" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="u1" target="p1">
+                  <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="e2" value="contains" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="p1" target="t1">
+                  <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+              </root>
+            </mxGraphModel>
+          </diagram>
+        </mxfile>
+        """;
+
+    private async Task RequestSaveAsync()
+    {
+        if (_editor is null)
+        {
+            return;
+        }
+
+        await _editor.RequestSaveAsync();
+    }
+
+    private async Task RequestExportAsync()
+    {
+        if (_editor is null)
+        {
+            return;
+        }
+
+        _status = "Exporting PNG...";
+        await _editor.RequestExportPngAsync();
+    }
+
+    private async Task ResetSampleAsync()
+    {
+        _xml = SampleXml;
+        _status = $"Reset sample at {DateTime.Now:T}";
+        _pngDataUri = null;
+
+        if (_editor is null)
+        {
+            return;
+        }
+
+        await _editor.SetXmlAsync(_xml);
+    }
+
+    private Task HandleAutosave(string xml)
+    {
+        _xml = xml;
+        _status = $"Autosave event at {DateTime.Now:T}";
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleSave(string xml)
+    {
+        _xml = xml;
+        _status = $"Save event at {DateTime.Now:T}";
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleExport(string dataUri)
+    {
+        _pngDataUri = dataUri;
+        _status = $"Export complete at {DateTime.Now:T}";
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleExit()
+    {
+        _status = $"Editor exit event at {DateTime.Now:T}";
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+}

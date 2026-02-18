@@ -1,0 +1,121 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<iframe id="@_iframeId"
+        class="@ClassName"
+        src="@EditorUrl"
+        title="draw.io editor"
+        loading="lazy"
+        referrerpolicy="strict-origin-when-cross-origin"></iframe>
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="text-danger mt-2 small">@_error</div>
+}
+
+@code {
+    [Parameter] public string InitialXml { get; set; } = string.Empty;
+    [Parameter] public string ClassName { get; set; } = "drawio-frame";
+    [Parameter] public EventCallback<string> Autosaved { get; set; }
+    [Parameter] public EventCallback<string> Saved { get; set; }
+    [Parameter] public EventCallback<string> Exported { get; set; }
+    [Parameter] public EventCallback Exited { get; set; }
+    [Parameter] public string EditorUrl { get; set; } = "https://embed.diagrams.net/?embed=1&proto=json&spin=1&ui=min&libraries=1";
+
+    private readonly string _iframeId = $"drawio_{Guid.NewGuid():N}";
+    private DotNetObjectReference<DrawioEditor>? _dotNetRef;
+    private bool _initialized;
+    private string? _error;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _dotNetRef = DotNetObjectReference.Create(this);
+
+        try
+        {
+            await JS.InvokeVoidAsync("drawioInterop.initialize", _iframeId, _dotNetRef, InitialXml);
+            _initialized = true;
+        }
+        catch (JSException ex)
+        {
+            _error = ex.Message;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public async Task SetXmlAsync(string xml)
+    {
+        if (!_initialized)
+        {
+            return;
+        }
+
+        await JS.InvokeVoidAsync("drawioInterop.setXml", _iframeId, xml);
+    }
+
+    public async Task RequestSaveAsync()
+    {
+        if (!_initialized)
+        {
+            return;
+        }
+
+        await JS.InvokeVoidAsync("drawioInterop.requestSave", _iframeId);
+    }
+
+    public async Task RequestExportPngAsync()
+    {
+        if (!_initialized)
+        {
+            return;
+        }
+
+        await JS.InvokeVoidAsync("drawioInterop.requestExportPng", _iframeId);
+    }
+
+    [JSInvokable]
+    public async Task OnAutosave(string xml)
+    {
+        await Autosaved.InvokeAsync(xml);
+    }
+
+    [JSInvokable]
+    public async Task OnSave(string xml)
+    {
+        await Saved.InvokeAsync(xml);
+    }
+
+    [JSInvokable]
+    public async Task OnExport(string data)
+    {
+        await Exported.InvokeAsync(data);
+    }
+
+    [JSInvokable]
+    public async Task OnExit()
+    {
+        await Exited.InvokeAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_initialized)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("drawioInterop.dispose", _iframeId);
+            }
+            catch (JSException)
+            {
+                // Ignore teardown errors during app shutdown.
+            }
+        }
+
+        _dotNetRef?.Dispose();
+    }
+}

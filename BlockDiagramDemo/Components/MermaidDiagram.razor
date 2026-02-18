@@ -1,0 +1,42 @@
+@inject IJSRuntime JS
+
+<div id="@_elementId" class="@ClassName"></div>
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="text-danger mt-2">@_error</div>
+}
+
+@code {
+    [Parameter] public string Definition { get; set; } = "graph TD; A-->B;";
+    [Parameter] public string? ClassName { get; set; }
+
+    private readonly string _elementId = $"mermaid_{Guid.NewGuid():N}";
+    private string? _lastRendered;
+    private string? _error;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_lastRendered == Definition)
+        {
+            return;
+        }
+
+        _lastRendered = Definition;
+
+        try
+        {
+            await JS.InvokeVoidAsync("mermaidInterop.render", _elementId, Definition);
+            if (!string.IsNullOrEmpty(_error))
+            {
+                _error = null;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (JSException ex)
+        {
+            _error = ex.Message;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+}

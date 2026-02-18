@@ -1,0 +1,62 @@
+@page "/mermaid"
+
+<PageTitle>Mermaid</PageTitle>
+
+<h1>Mermaid</h1>
+
+<div class="row g-4 mt-1">
+    <div class="col-12 col-lg-6">
+        <label for="mermaid-input" class="form-label fw-semibold">Mermaid Definition</label>
+        <textarea id="mermaid-input"
+                  class="form-control font-monospace"
+                  rows="16"
+                  @bind="_definition"
+                  @bind:event="oninput"></textarea>
+    </div>
+    <div class="col-12 col-lg-6">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <label class="form-label fw-semibold mb-0">Preview</label>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="ResetSample">Reset sample</button>
+        </div>
+        <div class="border rounded p-3 bg-light-subtle" style="min-height: 420px; overflow: auto;">
+            <MermaidDiagram Definition="@_definition" />
+        </div>
+    </div>
+</div>
+
+@code {
+    private const string SampleDiagram = """
+        flowchart LR
+            subgraph Inputs
+                I1[Flour]
+                I2[Water]
+            end
+
+            subgraph Process
+                A1[Meter]
+                A2[Meter]
+                A3[Mix]
+                A4[Divide]
+                A5[Bake]
+            end
+
+            subgraph Outputs
+                O1[Tortillas]
+            end
+
+            I1 --> A1
+            I2 --> A2
+            A1 --> A3
+            A2 --> A3
+            A3 --> A4
+            A4 --> A5
+            A5 --> O1
+        """;
+
+    private string _definition = SampleDiagram;
+
+    private void ResetSample()
+    {
+        _definition = SampleDiagram;
+    }
+}

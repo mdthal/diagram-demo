@@ -1,0 +1,176 @@
+@page "/jointjs"
+
+<PageTitle>JointJS</PageTitle>
+
+<h1>JointJS</h1>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <button class="btn btn-sm btn-success" @onclick="AddInputBlockAsync">Add input</button>
+    <button class="btn btn-sm btn-primary" @onclick="AddActionBlockAsync">Add action</button>
+    <button class="btn btn-sm btn-warning" @onclick="AddOutputBlockAsync">Add output</button>
+    <button class="btn btn-sm btn-secondary" @onclick="BeginConnectModeAsync">Connect mode</button>
+    <button class="btn btn-sm btn-outline-dark" @onclick="CancelModeAsync">Cancel mode</button>
+    <button class="btn btn-sm btn-outline-dark" @onclick="RenameSelectedAsync">Rename selected</button>
+    <button class="btn btn-sm btn-outline-danger" @onclick="DeleteSelectedAsync">Delete selected</button>
+    <button class="btn btn-sm btn-primary" @onclick="LoadRelationshipAsync">Reset sample</button>
+</div>
+
+<div class="row g-3">
+    <div class="@CanvasColumnClass">
+        <div class="border rounded p-2">
+            <JointJsCanvas @ref="_canvas"
+                           ClassName="joint-canvas"
+                           InitialExample="sample"
+                           GraphChanged="HandleGraphChanged" />
+        </div>
+    </div>
+    @if (_showJson)
+    {
+    <div class="col-12 col-xxl-3">
+        <label class="form-label fw-semibold">Graph JSON</label>
+        <textarea class="form-control font-monospace joint-json" readonly>@_json</textarea>
+    </div>
+    }
+</div>
+
+@code {
+    private JointJsCanvas? _canvas;
+    private string _status = "Ready";
+    private string _json = string.Empty;
+    private string _newBlockLabel = string.Empty;
+    private bool _showJson;
+
+    private string CanvasColumnClass => _showJson ? "col-12 col-xxl-9" : "col-12";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await RefreshJsonAsync();
+        _status = $"Loaded sample at {DateTime.Now:T}";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task AddInputBlockAsync()
+    {
+        await AddRoleBlockAsync("input");
+    }
+
+    private async Task AddActionBlockAsync()
+    {
+        await AddRoleBlockAsync("action");
+    }
+
+    private async Task AddOutputBlockAsync()
+    {
+        await AddRoleBlockAsync("output");
+    }
+
+    private async Task AddRoleBlockAsync(string role)
+    {
+        if (_canvas is null)
+        {
+            return;
+        }
+
+        var message = await _canvas.AddRoleBlockAsync(role, _newBlockLabel);
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            _status = message;
+        }
+    }
+
+    private async Task BeginConnectModeAsync()
+    {
+        if (_canvas is null)
+        {
+            return;
+        }
+
+        var message = await _canvas.BeginConnectModeAsync();
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            _status = message;
+        }
+    }
+
+    private async Task CancelModeAsync()
+    {
+        if (_canvas is null)
+        {
+            return;
+        }
+
+        var message = await _canvas.CancelModeAsync();
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            _status = message;
+        }
+    }
+
+    private async Task RenameSelectedAsync()
+    {
+        if (_canvas is null)
+        {
+            return;
+        }
+
+        var renamed = await _canvas.RenameSelectedAsync(null);
+        _status = renamed
+            ? $"Renamed selected item at {DateTime.Now:T}"
+            : "Rename canceled or no selection.";
+    }
+
+    private async Task DeleteSelectedAsync()
+    {
+        if (_canvas is null)
+        {
+            return;
+        }
+
+        var deleted = await _canvas.DeleteSelectedAsync();
+        _status = deleted
+            ? $"Deleted selected item at {DateTime.Now:T}"
+            : "No selected item to delete.";
+    }
+
+    private async Task LoadRelationshipAsync()
+    {
+        if (_canvas is null)
+        {
+            return;
+        }
+
+        await _canvas.LoadExampleAsync("sample");
+        _status = $"Loaded sample at {DateTime.Now:T}";
+    }
+
+    private async Task RefreshJsonAsync()
+    {
+        if (_canvas is null)
+        {
+            return;
+        }
+
+        var json = await _canvas.GetJsonAsync();
+        if (!string.IsNullOrWhiteSpace(json))
+        {
+            _json = json;
+        }
+    }
+
+    private Task HandleGraphChanged(string json)
+    {
+        _json = json;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void ToggleJsonPanel()
+    {
+        _showJson = !_showJson;
+    }
+}

@@ -1,0 +1,13 @@
+@page "/block-diagram"
+
+<PageTitle>Blazor Block Diagram</PageTitle>
+
+<div class="block-page">
+    <h1>Blazor Block Diagram</h1>
+
+    <BlockDiagramEditor @bind-Model="_model" />
+</div>
+
+@code {
+    private BlockDiagramModel _model = BlockDiagramSampleFactory.CreateDefault();
+}

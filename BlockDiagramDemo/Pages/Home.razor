@@ -1,0 +1,55 @@
+﻿@page "/"
+
+<PageTitle>Diagram Playground</PageTitle>
+
+<h1>Diagram Playground</h1>
+<p class="text-secondary">
+    Compare text-first, embedded, and Blazor-native approaches for block diagrams.
+</p>
+
+<div class="row g-4 mt-2">
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column">
+                <h2 class="h5 card-title">Mermaid</h2>
+                <p class="card-text text-secondary">
+                    Text-first diagrams with automatic layout. Fast for simple relationship modeling.
+                </p>
+                <a class="btn btn-primary mt-auto" href="/mermaid">Open Mermaid Page</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column">
+                <h2 class="h5 card-title">Draw.io</h2>
+                <p class="card-text text-secondary">
+                    Directly position nodes and edges with embedded diagrams.net.
+                </p>
+                <a class="btn btn-outline-primary mt-auto" href="/drawio">Open Draw.io Page</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column">
+                <h2 class="h5 card-title">JointJS</h2>
+                <p class="card-text text-secondary">
+                    Open-source graph toolkit for draggable nodes and programmable links.
+                </p>
+                <a class="btn btn-outline-info mt-auto" href="/jointjs">Open JointJS Page</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column">
+                <h2 class="h5 card-title">Blazor Block Diagram</h2>
+                <p class="card-text text-secondary">
+                    Pure Blazor interactions for adding, dragging, connecting, and labeling blocks.
+                </p>
+                <a class="btn btn-outline-dark mt-auto" href="/block-diagram">Open Block Diagram Page</a>
+            </div>
+        </div>
+    </div>
+</div>

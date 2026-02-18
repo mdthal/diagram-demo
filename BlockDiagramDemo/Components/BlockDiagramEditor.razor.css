@@ -1,0 +1,237 @@
+.block-diagram-editor {
+    --canvas-surface: #f7f9fc;
+    --canvas-grid: rgba(38, 64, 99, 0.08);
+    --canvas-border: rgba(35, 58, 93, 0.22);
+}
+
+.diagram-canvas-shell {
+    border: 1px solid var(--canvas-border);
+    border-radius: 0.8rem;
+    overflow: auto;
+    background: #fff;
+}
+
+.diagram-canvas {
+    position: relative;
+    min-width: 960px;
+    min-height: 38rem;
+    background-color: var(--canvas-surface);
+    background-image:
+        linear-gradient(var(--canvas-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--canvas-grid) 1px, transparent 1px);
+    background-size: 16px 16px;
+}
+
+.diagram-lane {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.diagram-lane span {
+    position: absolute;
+    top: 0.55rem;
+    left: 0.75rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    letter-spacing: 0.03em;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.lane-input {
+    background: linear-gradient(180deg, rgba(21, 128, 61, 0.08) 0%, rgba(21, 128, 61, 0.03) 100%);
+}
+
+.lane-input span {
+    background: rgba(21, 128, 61, 0.15);
+    color: #14532d;
+}
+
+.lane-action {
+    background: linear-gradient(180deg, rgba(2, 132, 199, 0.08) 0%, rgba(2, 132, 199, 0.03) 100%);
+    border-left: 1px solid rgba(2, 132, 199, 0.25);
+    border-right: 1px solid rgba(2, 132, 199, 0.25);
+}
+
+.lane-action span {
+    background: rgba(2, 132, 199, 0.16);
+    color: #0c4a6e;
+}
+
+.lane-output {
+    background: linear-gradient(180deg, rgba(146, 64, 14, 0.1) 0%, rgba(146, 64, 14, 0.04) 100%);
+}
+
+.lane-output span {
+    background: rgba(146, 64, 14, 0.16);
+    color: #7c2d12;
+}
+
+.diagram-links {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.link-hit-target {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 14;
+    pointer-events: stroke;
+    cursor: pointer;
+}
+
+.link-line {
+    fill: none;
+    stroke: #4c5d77;
+    stroke-width: 2.25;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    pointer-events: none;
+}
+
+.link-line.selected {
+    stroke: #0d6efd;
+    stroke-width: 3;
+}
+
+.link-preview {
+    fill: none;
+    stroke: #3276d4;
+    stroke-width: 2;
+    stroke-dasharray: 7 5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    pointer-events: none;
+}
+
+.link-arrow-head {
+    fill: #4c5d77;
+}
+
+.diagram-block-shell {
+    position: absolute;
+    z-index: 2;
+}
+
+.diagram-block {
+    width: 100%;
+    height: 100%;
+    border: 1px solid #617798;
+    border-radius: 0.55rem;
+    background: linear-gradient(180deg, #eff5ff 0%, #d8e7ff 100%);
+    color: #1d2d42;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.4rem;
+    box-shadow: 0 4px 14px rgba(23, 42, 70, 0.12);
+    user-select: none;
+    cursor: grab;
+}
+
+.diagram-block:active {
+    cursor: grabbing;
+}
+
+.diagram-block.selected {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.3), 0 6px 20px rgba(13, 110, 253, 0.2);
+}
+
+.diagram-block.role-input {
+    border-color: #2a8a52;
+    background: linear-gradient(180deg, #effdf5 0%, #d7f7e3 100%);
+}
+
+.diagram-block.role-action {
+    border-color: #3b6ea8;
+    background: linear-gradient(180deg, #eef5ff 0%, #d8e8ff 100%);
+}
+
+.diagram-block.role-output {
+    border-color: #ad661f;
+    background: linear-gradient(180deg, #fff5ea 0%, #ffe4c7 100%);
+}
+
+.diagram-block.resizing {
+    border-color: #1f7a6c;
+    box-shadow: 0 0 0 2px rgba(31, 122, 108, 0.3), 0 6px 20px rgba(31, 122, 108, 0.2);
+    cursor: nwse-resize;
+}
+
+.connector-handle {
+    position: absolute;
+    border: 2px solid #6e82a2;
+    border-radius: 999px;
+    background: #eef4ff;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85);
+    opacity: 0;
+    pointer-events: none;
+    padding: 0;
+    cursor: crosshair;
+    transition: opacity 120ms ease, transform 120ms ease;
+    transform: scale(0.94);
+}
+
+.diagram-block-shell:hover .connector-handle,
+.connector-handle.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1);
+}
+
+.connector-handle:hover,
+.connector-handle.active {
+    border-color: #0d6efd;
+    background: #d6e7ff;
+}
+
+.resize-handle {
+    position: absolute;
+    border: 1px solid #4f617f;
+    border-radius: 0.25rem;
+    background: linear-gradient(135deg, #edf2fb 0%, #d5dfef 100%);
+    opacity: 0;
+    pointer-events: none;
+    padding: 0;
+    cursor: nwse-resize;
+    transition: opacity 120ms ease;
+}
+
+.diagram-block-shell:hover .resize-handle,
+.resize-handle.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.resize-handle::before {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    background:
+        linear-gradient(135deg, transparent 32%, rgba(56, 75, 105, 0.85) 32%, rgba(56, 75, 105, 0.85) 42%, transparent 42%),
+        linear-gradient(135deg, transparent 50%, rgba(56, 75, 105, 0.85) 50%, rgba(56, 75, 105, 0.85) 60%, transparent 60%);
+}
+
+.status-note {
+    font-size: 0.86rem;
+    color: #47556c;
+}
+
+@media (max-width: 1199.98px) {
+    .diagram-canvas {
+        min-width: 100%;
+        min-height: 30rem;
+    }
+}

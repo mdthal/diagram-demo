@@ -1,0 +1,1435 @@
+@using BlockDiagramDemo.Models
+@inject IJSRuntime JS
+
+<div class="block-diagram-editor @ClassName">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <button class="btn btn-sm btn-success" @onclick="AddInputBlockAsync">Add input</button>
+        <button class="btn btn-sm btn-primary" @onclick="AddActionBlockAsync">Add action</button>
+        <button class="btn btn-sm btn-warning" @onclick="AddOutputBlockAsync">Add output</button>
+        <button class="btn btn-sm btn-danger"
+                @onclick="DeleteSelectionAsync"
+                disabled="@(_selectedBlockId is null && _selectedLinkId is null)">
+            Delete selected
+        </button>
+        <button class="btn btn-sm btn-secondary" @onclick="ResetSampleAsync">Reset sample</button>
+        <button class="btn btn-sm btn-outline-dark" @onclick="ToggleInspectorPanel">
+            @(_showInspector ? "Hide inspector" : "Show inspector")
+        </button>
+    </div>
+
+    <div class="row g-3">
+        <div class="@CanvasColumnClass">
+            <div class="diagram-canvas-shell">
+                <div class="diagram-canvas"
+                     @ref="_canvasElement"
+                     @onmousemove="HandleCanvasMouseMoveAsync"
+                     @onmouseup="HandleCanvasMouseUp"
+                     @onmouseleave="HandleCanvasMouseLeave">
+                    <div class="diagram-lane lane-input" style="@GetLaneStyle(DiagramBlockRole.Input)">
+                        <span>Inputs</span>
+                    </div>
+                    <div class="diagram-lane lane-action" style="@GetLaneStyle(DiagramBlockRole.Action)">
+                        <span>Process</span>
+                    </div>
+                    <div class="diagram-lane lane-output" style="@GetLaneStyle(DiagramBlockRole.Output)">
+                        <span>Outputs</span>
+                    </div>
+
+                    <svg class="diagram-links">
+                        <defs>
+                            <marker id="@_arrowHeadId"
+                                    markerWidth="6"
+                                    markerHeight="4"
+                                    refX="6"
+                                    refY="2"
+                                    orient="auto"
+                                    markerUnits="strokeWidth">
+                                <polygon points="0 0, 6 2, 0 4" class="link-arrow-head" />
+                            </marker>
+                        </defs>
+
+                        @foreach (var link in Model.Links)
+                        {
+                            if (!TryGetLinkPath(link, out var pathData))
+                            {
+                                continue;
+                            }
+
+                            <path d="@pathData"
+                                  class="link-hit-target"
+                                  @onclick="(() => HandleLinkClick(link.Id))"
+                                  @onclick:stopPropagation="true"></path>
+
+                            <path d="@pathData"
+                                  class="@GetLinkCssClass(link)"
+                                  marker-end="url(#@_arrowHeadId)"></path>
+
+                        }
+
+                        @if (TryGetConnectionPreviewPath(out var previewPath))
+                        {
+                            <path d="@previewPath"
+                                  class="link-preview"
+                                  marker-end="url(#@_arrowHeadId)"></path>
+                        }
+                    </svg>
+
+                    @foreach (var block in Model.Blocks)
+                    {
+                        <div class="diagram-block-shell" style="@GetBlockShellStyle(block)">
+                            <button type="button"
+                                    class="@GetBlockCssClass(block)"
+                                    @onmousedown="@(args => HandleBlockMouseDown(block, args))"
+                                    @onclick="@(args => HandleBlockClickAsync(block, args))">
+                                <span>@block.Label</span>
+                            </button>
+
+                            @foreach (var side in GetVisibleConnectorSides(block))
+                            {
+                                <button type="button"
+                                        class="@GetConnectorCssClass(block, side)"
+                                        style="@GetConnectorStyle(block, side)"
+                                        title="@GetConnectorTitle(block, side)"
+                                        @onmousedown="@(args => HandleConnectorMouseDown(block, side, args))"
+                                        @onmouseup="@(args => HandleConnectorMouseUpAsync(block, side, args))"
+                                        @onmousedown:stopPropagation="true"
+                                        @onmousedown:preventDefault="true"
+                                        @onmouseup:stopPropagation="true"
+                                        @onmouseup:preventDefault="true"
+                                        @onclick:stopPropagation="true"
+                                        @onclick:preventDefault="true"></button>
+                            }
+
+                            <button type="button"
+                                    class="@GetResizeHandleCssClass(block)"
+                                    style="@GetResizeHandleStyle(block)"
+                                    title="Resize block"
+                                    @onmousedown="@(args => HandleResizeMouseDown(block, args))"
+                                    @onmousedown:stopPropagation="true"
+                                    @onmousedown:preventDefault="true"
+                                    @onclick:stopPropagation="true"
+                                    @onclick:preventDefault="true"></button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (_showInspector)
+        {
+        <div class="col-12 col-xxl-3">
+            <section class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="h6 mb-3">Inspector</h2>
+                    @if (SelectedBlock is not null)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold mb-1">Label</label>
+                            <input class="form-control"
+                                   value="@SelectedBlock.Label"
+                                   @oninput="HandleLabelInputAsync" />
+                        </div>
+                        <div class="small text-secondary">
+                            <div><span class="fw-semibold text-dark">Type:</span> Block</div>
+                            <div><span class="fw-semibold text-dark">Role:</span> @SelectedBlock.Role</div>
+                            <div><span class="fw-semibold text-dark">Id:</span> @SelectedBlock.Id</div>
+                            <div><span class="fw-semibold text-dark">Position:</span> @($"{SelectedBlock.X:0}, {SelectedBlock.Y:0}")</div>
+                            <div><span class="fw-semibold text-dark">Size:</span> @($"{SelectedBlock.Width:0} x {SelectedBlock.Height:0}")</div>
+                            <div><span class="fw-semibold text-dark">Outgoing:</span> @Model.Links.Count(link => link.SourceBlockId == SelectedBlock.Id)</div>
+                            <div><span class="fw-semibold text-dark">Incoming:</span> @Model.Links.Count(link => link.TargetBlockId == SelectedBlock.Id)</div>
+                        </div>
+                    }
+                    else if (SelectedLink is not null)
+                    {
+                        <div class="small text-secondary">
+                            <div><span class="fw-semibold text-dark">Type:</span> Connection</div>
+                            <div><span class="fw-semibold text-dark">Id:</span> @SelectedLink.Id</div>
+                            <div><span class="fw-semibold text-dark">From:</span> @($"{SelectedLink.SourceBlockId} ({SelectedLink.SourceSide})")</div>
+                            <div><span class="fw-semibold text-dark">To:</span> @($"{SelectedLink.TargetBlockId} ({SelectedLink.TargetSide})")</div>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-secondary small mb-0">Select a block or a connection to inspect and edit.</p>
+                    }
+                </div>
+            </section>
+        </div>
+        }
+    </div>
+    <p class="status-note mt-3 mb-0">@_status</p>
+</div>
+
+@code {
+    private const double GridSize = 16;
+    private const double MinimumBlockOffset = 24;
+    private const double MinimumBlockWidth = 80;
+    private const double MinimumBlockHeight = 48;
+    private const double DefaultBlockWidth = 128;
+    private const double DefaultBlockHeight = 56;
+    private const double ConnectorHandleSize = 10;
+    private const double ResizeHandleSize = 10;
+    private const double MinimumCanvasWidth = 960;
+    private const double MinimumActionLaneWidth = 240;
+    private const double InputLaneWidth = 176;
+    private const double OutputLaneWidth = 176;
+    private const double LanePadding = 16;
+
+    private static readonly (int Dx, int Dy, CardinalDirection Direction)[] CardinalMoves =
+    [
+        (0, -1, CardinalDirection.Up),
+        (1, 0, CardinalDirection.Right),
+        (0, 1, CardinalDirection.Down),
+        (-1, 0, CardinalDirection.Left)
+    ];
+
+    private static readonly DiagramConnectorSide[] InputConnectorSides = [DiagramConnectorSide.Right];
+    private static readonly DiagramConnectorSide[] ActionConnectorSides = [DiagramConnectorSide.Left, DiagramConnectorSide.Right];
+    private static readonly DiagramConnectorSide[] OutputConnectorSides = [DiagramConnectorSide.Left];
+
+    [Parameter, EditorRequired]
+    public BlockDiagramModel Model { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<BlockDiagramModel> ModelChanged { get; set; }
+
+    [Parameter]
+    public string ClassName { get; set; } = string.Empty;
+
+    private readonly string _arrowHeadId = $"arrow_{Guid.NewGuid():N}";
+    private string? _selectedBlockId;
+    private string? _selectedLinkId;
+    private string? _draggingBlockId;
+    private string? _resizingBlockId;
+    private ConnectionDragState? _connectionDrag;
+    private double _dragStartClientX;
+    private double _dragStartClientY;
+    private double _dragStartBlockX;
+    private double _dragStartBlockY;
+    private double _resizeStartClientX;
+    private double _resizeStartClientY;
+    private double _resizeStartWidth;
+    private double _resizeStartHeight;
+    private ElementReference _canvasElement;
+    private double _canvasWidth = MinimumCanvasWidth;
+    private string _status = "Ready";
+    private bool _showInspector;
+
+    private DiagramBlock? SelectedBlock => TryGetBlock(_selectedBlockId);
+
+    private DiagramLink? SelectedLink => TryGetLink(_selectedLinkId);
+
+    private string CanvasColumnClass => _showInspector ? "col-12 col-xxl-9" : "col-12";
+
+    private string ConnectionHint =>
+        _connectionDrag is null
+            ? "Valid links: Input -> Action, Action -> Action, Action -> Output"
+            : "Connecting: release on a connector point";
+
+    protected override void OnParametersSet()
+    {
+        Model ??= new BlockDiagramModel();
+        foreach (var block in Model.Blocks)
+        {
+            ConstrainBlockToLane(block);
+        }
+
+        if (TryGetBlock(_selectedBlockId) is null)
+        {
+            _selectedBlockId = null;
+        }
+
+        if (TryGetLink(_selectedLinkId) is null)
+        {
+            _selectedLinkId = null;
+        }
+
+        if (TryGetBlock(_draggingBlockId) is null)
+        {
+            _draggingBlockId = null;
+        }
+
+        if (TryGetBlock(_resizingBlockId) is null)
+        {
+            _resizingBlockId = null;
+        }
+
+        if (_connectionDrag is not null && TryGetBlock(_connectionDrag.SourceBlockId) is null)
+        {
+            _connectionDrag = null;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await UpdateCanvasWidthAsync();
+    }
+
+    private Task AddInputBlockAsync() => AddBlockAsync(DiagramBlockRole.Input);
+
+    private Task AddActionBlockAsync() => AddBlockAsync(DiagramBlockRole.Action);
+
+    private Task AddOutputBlockAsync() => AddBlockAsync(DiagramBlockRole.Output);
+
+    private async Task AddBlockAsync(DiagramBlockRole role)
+    {
+        var block = CreateNewBlock(role);
+        Model.Blocks.Add(block);
+        _selectedBlockId = block.Id;
+        _selectedLinkId = null;
+        _status = $"Added {role.ToString().ToLowerInvariant()} block \"{block.Label}\".";
+
+        await NotifyModelChangedAsync();
+    }
+
+    private async Task DeleteSelectionAsync()
+    {
+        if (_selectedLinkId is not null)
+        {
+            var removedLinkCount = Model.Links.RemoveAll(link => link.Id == _selectedLinkId);
+            _selectedLinkId = null;
+
+            if (removedLinkCount > 0)
+            {
+                _status = "Deleted selected connection.";
+                await NotifyModelChangedAsync();
+            }
+
+            return;
+        }
+
+        if (_selectedBlockId is null)
+        {
+            return;
+        }
+
+        var removedCount = Model.Links.RemoveAll(
+            link => link.SourceBlockId == _selectedBlockId || link.TargetBlockId == _selectedBlockId);
+
+        var removedBlock = Model.Blocks.RemoveAll(block => block.Id == _selectedBlockId) > 0;
+        if (!removedBlock)
+        {
+            _status = "Selection no longer exists.";
+            _selectedBlockId = null;
+            _connectionDrag = null;
+            return;
+        }
+
+        _status = removedCount == 0
+            ? "Deleted selected block."
+            : $"Deleted selected block and {removedCount} link(s).";
+
+        _selectedBlockId = null;
+        _draggingBlockId = null;
+        _resizingBlockId = null;
+        _connectionDrag = null;
+
+        await NotifyModelChangedAsync();
+    }
+
+    private async Task ResetSampleAsync()
+    {
+        Model = BlockDiagramSampleFactory.CreateDefault();
+        _selectedBlockId = null;
+        _selectedLinkId = null;
+        _draggingBlockId = null;
+        _resizingBlockId = null;
+        _connectionDrag = null;
+        _status = "Diagram reset to sample.";
+
+        await NotifyModelChangedAsync();
+    }
+
+    private void HandleBlockMouseDown(DiagramBlock block, MouseEventArgs args)
+    {
+        if (_connectionDrag is not null || _resizingBlockId is not null || args.Button != 0)
+        {
+            return;
+        }
+
+        _selectedBlockId = block.Id;
+        _selectedLinkId = null;
+        _draggingBlockId = block.Id;
+        _dragStartClientX = args.ClientX;
+        _dragStartClientY = args.ClientY;
+        _dragStartBlockX = block.X;
+        _dragStartBlockY = block.Y;
+        _status = $"Dragging {block.Label}...";
+    }
+
+    private Task HandleBlockClickAsync(DiagramBlock block, MouseEventArgs _)
+    {
+        if (_connectionDrag is not null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _selectedBlockId = block.Id;
+        _selectedLinkId = null;
+        _status = $"Selected {block.Label}.";
+        return Task.CompletedTask;
+    }
+
+    private void HandleResizeMouseDown(DiagramBlock block, MouseEventArgs args)
+    {
+        if (_connectionDrag is not null || args.Button != 0)
+        {
+            return;
+        }
+
+        _selectedBlockId = block.Id;
+        _selectedLinkId = null;
+        _draggingBlockId = null;
+        _resizingBlockId = block.Id;
+        _resizeStartClientX = args.ClientX;
+        _resizeStartClientY = args.ClientY;
+        _resizeStartWidth = block.Width;
+        _resizeStartHeight = block.Height;
+        _status = $"Resizing {block.Label}...";
+    }
+
+    private void HandleConnectorMouseDown(DiagramBlock block, DiagramConnectorSide side, MouseEventArgs args)
+    {
+        if (_resizingBlockId is not null || args.Button != 0)
+        {
+            return;
+        }
+
+        if (!GetVisibleConnectorSides(block).Contains(side))
+        {
+            return;
+        }
+
+        if (!CanStartConnection(block, side, out var reason))
+        {
+            _status = reason;
+            return;
+        }
+
+        _selectedBlockId = block.Id;
+        _selectedLinkId = null;
+        _draggingBlockId = null;
+
+        var (startX, startY) = GetConnectorPoint(block, side);
+
+        _connectionDrag = new ConnectionDragState
+        {
+            SourceBlockId = block.Id,
+            SourceSide = side,
+            StartClientX = args.ClientX,
+            StartClientY = args.ClientY,
+            StartX = startX,
+            StartY = startY,
+            CurrentX = startX,
+            CurrentY = startY
+        };
+
+        _status = $"Connecting from {block.Label} ({side}).";
+    }
+
+    private async Task HandleConnectorMouseUpAsync(DiagramBlock targetBlock, DiagramConnectorSide targetSide, MouseEventArgs _)
+    {
+        if (_connectionDrag is null)
+        {
+            return;
+        }
+
+        if (!GetVisibleConnectorSides(targetBlock).Contains(targetSide))
+        {
+            CancelConnectionDrag("Connector is not available for this block role.");
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (targetSide != DiagramConnectorSide.Left)
+        {
+            CancelConnectionDrag("Connect into the left side of the target block.");
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (_connectionDrag.SourceBlockId == targetBlock.Id)
+        {
+            CancelConnectionDrag("Cannot connect a block to itself.");
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var sourceBlock = TryGetBlock(_connectionDrag.SourceBlockId);
+        if (sourceBlock is null)
+        {
+            CancelConnectionDrag("Source block no longer exists.");
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (!CanCreateConnection(sourceBlock, targetBlock, out var ruleError))
+        {
+            CancelConnectionDrag(ruleError);
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (Model.Links.Any(link =>
+                link.SourceBlockId == _connectionDrag.SourceBlockId &&
+                link.TargetBlockId == targetBlock.Id &&
+                link.SourceSide == _connectionDrag.SourceSide &&
+                link.TargetSide == targetSide))
+        {
+            CancelConnectionDrag("Connection already exists between those connector points.");
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var createdLink = new DiagramLink
+        {
+            Id = $"link_{Guid.NewGuid():N}",
+            SourceBlockId = _connectionDrag.SourceBlockId,
+            TargetBlockId = targetBlock.Id,
+            SourceSide = _connectionDrag.SourceSide,
+            TargetSide = targetSide
+        };
+
+        Model.Links.Add(createdLink);
+
+        _connectionDrag = null;
+        _selectedLinkId = createdLink.Id;
+        _selectedBlockId = null;
+        _status = "Connection added.";
+
+        await NotifyModelChangedAsync();
+    }
+
+    private async Task HandleCanvasMouseMoveAsync(MouseEventArgs args)
+    {
+        if (_connectionDrag is not null)
+        {
+            if (args.Buttons == 0)
+            {
+                CancelConnectionDrag("Connection cancelled.");
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            var previewRawX = _connectionDrag.StartX + (args.ClientX - _connectionDrag.StartClientX);
+            var previewRawY = _connectionDrag.StartY + (args.ClientY - _connectionDrag.StartClientY);
+            _connectionDrag.CurrentX = SnapToGrid(previewRawX);
+            _connectionDrag.CurrentY = SnapToGrid(previewRawY);
+
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (_resizingBlockId is not null)
+        {
+            var block = TryGetBlock(_resizingBlockId);
+            if (block is null)
+            {
+                _resizingBlockId = null;
+                return;
+            }
+
+            if (args.Buttons == 0)
+            {
+                EndResize();
+                return;
+            }
+
+            var rawWidth = _resizeStartWidth + (args.ClientX - _resizeStartClientX);
+            var rawHeight = _resizeStartHeight + (args.ClientY - _resizeStartClientY);
+            var snappedWidth = SnapSizeToGrid(rawWidth, MinimumBlockWidth);
+            var snappedHeight = SnapSizeToGrid(rawHeight, MinimumBlockHeight);
+            var widthBounds = GetLaneHorizontalBounds(block.Role);
+            var maxWidthInLane = Math.Max(MinimumBlockWidth, SnapToGrid(widthBounds.MaxX - block.X));
+            snappedWidth = Math.Min(snappedWidth, maxWidthInLane);
+
+            if (Math.Abs(snappedWidth - block.Width) < 0.001 && Math.Abs(snappedHeight - block.Height) < 0.001)
+            {
+                return;
+            }
+
+            block.Width = snappedWidth;
+            block.Height = snappedHeight;
+
+            await NotifyModelChangedAsync();
+            return;
+        }
+
+        if (_draggingBlockId is null)
+        {
+            return;
+        }
+
+        var draggedBlock = TryGetBlock(_draggingBlockId);
+        if (draggedBlock is null)
+        {
+            _draggingBlockId = null;
+            return;
+        }
+
+        if (args.Buttons == 0)
+        {
+            EndDrag();
+            return;
+        }
+
+        var blockRawX = _dragStartBlockX + (args.ClientX - _dragStartClientX);
+        var blockRawY = _dragStartBlockY + (args.ClientY - _dragStartClientY);
+        var bounds = GetLaneHorizontalBounds(draggedBlock.Role);
+        var minX = bounds.MinX;
+        var maxX = Math.Max(minX, bounds.MaxX - draggedBlock.Width);
+        var snappedX = SnapToGrid(Math.Clamp(blockRawX, minX, maxX));
+        var snappedY = SnapToGrid(Math.Max(MinimumBlockOffset, blockRawY));
+
+        if (Math.Abs(snappedX - draggedBlock.X) < 0.001 && Math.Abs(snappedY - draggedBlock.Y) < 0.001)
+        {
+            return;
+        }
+
+        draggedBlock.X = snappedX;
+        draggedBlock.Y = snappedY;
+
+        await NotifyModelChangedAsync();
+    }
+
+    private void HandleCanvasMouseUp(MouseEventArgs _)
+    {
+        EndDrag();
+        EndResize();
+
+        if (_connectionDrag is not null)
+        {
+            CancelConnectionDrag("Connection cancelled.");
+        }
+    }
+
+    private void HandleCanvasMouseLeave(MouseEventArgs _)
+    {
+        EndDrag();
+        EndResize();
+
+        if (_connectionDrag is not null)
+        {
+            CancelConnectionDrag("Connection cancelled.");
+        }
+    }
+
+    private void HandleLinkClick(string linkId)
+    {
+        if (TryGetLink(linkId) is null)
+        {
+            return;
+        }
+
+        _selectedLinkId = linkId;
+        _selectedBlockId = null;
+        _status = "Selected connection.";
+    }
+
+    private async Task HandleLabelInputAsync(ChangeEventArgs args)
+    {
+        var block = SelectedBlock;
+        if (block is null)
+        {
+            return;
+        }
+
+        block.Label = args.Value?.ToString() ?? string.Empty;
+        _status = $"Updated label for {block.Id}.";
+
+        await NotifyModelChangedAsync();
+    }
+
+    private void EndDrag()
+    {
+        if (_draggingBlockId is null)
+        {
+            return;
+        }
+
+        var block = TryGetBlock(_draggingBlockId);
+        _draggingBlockId = null;
+        _dragStartClientX = 0;
+        _dragStartClientY = 0;
+        _dragStartBlockX = 0;
+        _dragStartBlockY = 0;
+
+        if (block is not null)
+        {
+            _status = $"Placed {block.Label}.";
+        }
+    }
+
+    private void EndResize()
+    {
+        if (_resizingBlockId is null)
+        {
+            return;
+        }
+
+        var block = TryGetBlock(_resizingBlockId);
+        _resizingBlockId = null;
+        _resizeStartClientX = 0;
+        _resizeStartClientY = 0;
+        _resizeStartWidth = 0;
+        _resizeStartHeight = 0;
+
+        if (block is not null)
+        {
+            _status = $"Resized {block.Label}.";
+        }
+    }
+
+    private void CancelConnectionDrag(string status)
+    {
+        _connectionDrag = null;
+        _status = status;
+    }
+
+    private void ToggleInspectorPanel()
+    {
+        _showInspector = !_showInspector;
+    }
+
+    private async Task UpdateCanvasWidthAsync()
+    {
+        if (_canvasElement.Context is null)
+        {
+            return;
+        }
+
+        var measuredWidth = await JS.InvokeAsync<double>("blockDiagramInterop.getWidth", _canvasElement);
+        var safeWidth = Math.Max(MinimumCanvasWidth, measuredWidth);
+
+        if (Math.Abs(_canvasWidth - safeWidth) < 1)
+        {
+            return;
+        }
+
+        _canvasWidth = safeWidth;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private DiagramBlock? TryGetBlock(string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return null;
+        }
+
+        return Model.Blocks.FirstOrDefault(block => block.Id == id);
+    }
+
+    private DiagramLink? TryGetLink(string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return null;
+        }
+
+        return Model.Links.FirstOrDefault(link => link.Id == id);
+    }
+
+    private static IReadOnlyList<DiagramConnectorSide> GetVisibleConnectorSides(DiagramBlock block)
+    {
+        return block.Role switch
+        {
+            DiagramBlockRole.Input => InputConnectorSides,
+            DiagramBlockRole.Action => ActionConnectorSides,
+            DiagramBlockRole.Output => OutputConnectorSides,
+            _ => ActionConnectorSides
+        };
+    }
+
+    private static bool CanStartConnection(DiagramBlock sourceBlock, DiagramConnectorSide side, out string reason)
+    {
+        if (sourceBlock.Role == DiagramBlockRole.Output)
+        {
+            reason = "Output blocks cannot start connections.";
+            return false;
+        }
+
+        if (side != DiagramConnectorSide.Right)
+        {
+            reason = "Start connections from the right side.";
+            return false;
+        }
+
+        reason = string.Empty;
+        return true;
+    }
+
+    private bool CanCreateConnection(DiagramBlock sourceBlock, DiagramBlock targetBlock, out string reason)
+    {
+        var validRolePair =
+            (sourceBlock.Role, targetBlock.Role) switch
+            {
+                (DiagramBlockRole.Input, DiagramBlockRole.Action) => true,
+                (DiagramBlockRole.Action, DiagramBlockRole.Action) => true,
+                (DiagramBlockRole.Action, DiagramBlockRole.Output) => true,
+                _ => false
+            };
+
+        if (!validRolePair)
+        {
+            reason = "Invalid route. Allowed: Input -> Action, Action -> Action, Action -> Output.";
+            return false;
+        }
+
+        if (!IsForwardConnection(sourceBlock, targetBlock))
+        {
+            reason = "Connections must move left to right.";
+            return false;
+        }
+
+        if (CreatesCycle(sourceBlock.Id, targetBlock.Id))
+        {
+            reason = "Connection would create a cycle.";
+            return false;
+        }
+
+        reason = string.Empty;
+        return true;
+    }
+
+    private static bool IsForwardConnection(DiagramBlock sourceBlock, DiagramBlock targetBlock)
+    {
+        var sourceCenterX = sourceBlock.X + (sourceBlock.Width / 2);
+        var targetCenterX = targetBlock.X + (targetBlock.Width / 2);
+        return targetCenterX > sourceCenterX + (GridSize / 2);
+    }
+
+    private bool CreatesCycle(string sourceBlockId, string targetBlockId)
+    {
+        var stack = new Stack<string>();
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+        stack.Push(targetBlockId);
+
+        while (stack.Count > 0)
+        {
+            var current = stack.Pop();
+            if (!visited.Add(current))
+            {
+                continue;
+            }
+
+            if (current == sourceBlockId)
+            {
+                return true;
+            }
+
+            foreach (var next in Model.Links.Where(link => link.SourceBlockId == current).Select(link => link.TargetBlockId))
+            {
+                stack.Push(next);
+            }
+        }
+
+        return false;
+    }
+
+    private DiagramBlock CreateNewBlock(DiagramBlockRole role)
+    {
+        var existingInRole = Model.Blocks.Count(block => block.Role == role);
+        var ordinal = existingInRole + 1;
+        var columns = role == DiagramBlockRole.Action ? 2 : 1;
+        var row = existingInRole / columns;
+        var column = existingInRole % columns;
+        var bounds = GetLaneHorizontalBounds(role);
+        var x = bounds.MinX + (column * (DefaultBlockWidth + GridSize));
+        var maxX = Math.Max(bounds.MinX, bounds.MaxX - DefaultBlockWidth);
+        x = Math.Min(x, maxX);
+
+        var block = new DiagramBlock
+        {
+            Id = $"{role.ToString().ToLowerInvariant()}_{Guid.NewGuid():N}",
+            Label = $"{role} {ordinal}",
+            Role = role,
+            X = SnapToGrid(x),
+            Y = SnapToGrid(72 + (row * 144)),
+            Width = DefaultBlockWidth,
+            Height = DefaultBlockHeight
+        };
+
+        ConstrainBlockToLane(block);
+        return block;
+    }
+
+    private (double MinX, double MaxX) GetLaneHorizontalBounds(DiagramBlockRole role)
+    {
+        var layout = GetLaneLayout();
+
+        return role switch
+        {
+            DiagramBlockRole.Input => (layout.InputStart + LanePadding, layout.ActionStart - LanePadding),
+            DiagramBlockRole.Action => (layout.ActionStart + LanePadding, layout.OutputStart - LanePadding),
+            DiagramBlockRole.Output => (layout.OutputStart + LanePadding, layout.OutputEnd - LanePadding),
+            _ => (layout.InputStart + LanePadding, layout.OutputEnd - LanePadding)
+        };
+    }
+
+    private void ConstrainBlockToLane(DiagramBlock block)
+    {
+        var bounds = GetLaneHorizontalBounds(block.Role);
+        var laneWidth = Math.Max(MinimumBlockWidth, bounds.MaxX - bounds.MinX);
+        var maxWidth = Math.Max(MinimumBlockWidth, SnapToGrid(laneWidth));
+        block.Width = Math.Clamp(block.Width, MinimumBlockWidth, maxWidth);
+
+        var minX = bounds.MinX;
+        var maxX = Math.Max(minX, bounds.MaxX - block.Width);
+        block.X = SnapToGrid(Math.Clamp(block.X, minX, maxX));
+        block.Y = SnapToGrid(Math.Max(MinimumBlockOffset, block.Y));
+    }
+
+    private string GetLaneStyle(DiagramBlockRole role)
+    {
+        var layout = GetLaneLayout();
+
+        return role switch
+        {
+            DiagramBlockRole.Input => $"left:{layout.InputStart:0.###}px; width:{InputLaneWidth:0.###}px;",
+            DiagramBlockRole.Action => $"left:{layout.ActionStart:0.###}px; width:{layout.ActionWidth:0.###}px;",
+            DiagramBlockRole.Output => $"left:{layout.OutputStart:0.###}px; width:{OutputLaneWidth:0.###}px;",
+            _ => string.Empty
+        };
+    }
+
+    private (double InputStart, double ActionStart, double OutputStart, double OutputEnd, double ActionWidth) GetLaneLayout()
+    {
+        var canvasWidth = Math.Max(MinimumCanvasWidth, _canvasWidth);
+        var inputStart = MinimumBlockOffset;
+        var actionStart = inputStart + InputLaneWidth;
+        var outputEnd = canvasWidth - MinimumBlockOffset;
+        var outputStart = outputEnd - OutputLaneWidth;
+        var minimumOutputStart = actionStart + MinimumActionLaneWidth;
+
+        if (outputStart < minimumOutputStart)
+        {
+            outputStart = minimumOutputStart;
+            outputEnd = outputStart + OutputLaneWidth;
+        }
+
+        var actionWidth = outputStart - actionStart;
+        return (inputStart, actionStart, outputStart, outputEnd, actionWidth);
+    }
+
+    private bool TryGetLinkPath(
+        DiagramLink link,
+        out string pathData)
+    {
+        pathData = string.Empty;
+
+        var source = TryGetBlock(link.SourceBlockId);
+        var target = TryGetBlock(link.TargetBlockId);
+
+        if (source is null || target is null)
+        {
+            return false;
+        }
+
+        var start = GetConnectorPoint(source, link.SourceSide);
+        var end = GetConnectorPoint(target, link.TargetSide);
+        var sourceExit = OffsetFromSide(start, link.SourceSide, GridSize);
+        var targetEntry = OffsetFromSide(end, link.TargetSide, GridSize);
+
+        var route = BuildRoutedPolyline(
+            source.Id,
+            target.Id,
+            start,
+            sourceExit,
+            targetEntry,
+            end);
+
+        pathData = BuildPathData(route);
+        return true;
+    }
+
+    private bool TryGetConnectionPreviewPath(out string pathData)
+    {
+        pathData = string.Empty;
+
+        if (_connectionDrag is null)
+        {
+            return false;
+        }
+
+        var source = TryGetBlock(_connectionDrag.SourceBlockId);
+        if (source is null)
+        {
+            return false;
+        }
+
+        var start = GetConnectorPoint(source, _connectionDrag.SourceSide);
+        var sourceExit = OffsetFromSide(start, _connectionDrag.SourceSide, GridSize);
+        var current = (X: SnapToGrid(_connectionDrag.CurrentX), Y: SnapToGrid(_connectionDrag.CurrentY));
+        var preview = BuildPreviewPolyline(sourceExit, current);
+        preview.Insert(0, start);
+        preview = SimplifyPolyline(preview);
+        pathData = BuildPathData(preview);
+
+        return true;
+    }
+
+    private List<(double X, double Y)> BuildRoutedPolyline(
+        string sourceBlockId,
+        string targetBlockId,
+        (double X, double Y) start,
+        (double X, double Y) sourceExit,
+        (double X, double Y) targetEntry,
+        (double X, double Y) end)
+    {
+        var route = new List<(double X, double Y)> { start, sourceExit };
+
+        if (TryFindGridPath(sourceExit, targetEntry, sourceBlockId, targetBlockId, out var middlePath))
+        {
+            foreach (var point in middlePath.Skip(1).Take(Math.Max(0, middlePath.Count - 2)))
+            {
+                route.Add((FromGrid(point.X), FromGrid(point.Y)));
+            }
+        }
+        else
+        {
+            var fallback = BuildPreviewPolyline(sourceExit, targetEntry);
+            foreach (var point in fallback.Skip(1).Take(Math.Max(0, fallback.Count - 2)))
+            {
+                route.Add(point);
+            }
+        }
+
+        route.Add(targetEntry);
+        route.Add(end);
+        return SimplifyPolyline(route);
+    }
+
+    private List<(double X, double Y)> BuildPreviewPolyline((double X, double Y) start, (double X, double Y) end)
+    {
+        if (TryFindGridPath(start, end, null, null, out var path))
+        {
+            return path.Select(point => (FromGrid(point.X), FromGrid(point.Y))).ToList();
+        }
+
+        var points = new List<(double X, double Y)> { start };
+
+        if (Math.Abs(start.X - end.X) >= Math.Abs(start.Y - end.Y))
+        {
+            var midX = SnapToGrid((start.X + end.X) / 2);
+            points.Add((midX, start.Y));
+            points.Add((midX, end.Y));
+        }
+        else
+        {
+            var midY = SnapToGrid((start.Y + end.Y) / 2);
+            points.Add((start.X, midY));
+            points.Add((end.X, midY));
+        }
+
+        points.Add(end);
+        return SimplifyPolyline(points);
+    }
+
+    private bool TryFindGridPath(
+        (double X, double Y) start,
+        (double X, double Y) end,
+        string? sourceBlockId,
+        string? targetBlockId,
+        out List<GridPoint> path)
+    {
+        path = [];
+
+        var startPoint = new GridPoint(ToGrid(start.X), ToGrid(start.Y));
+        var endPoint = new GridPoint(ToGrid(end.X), ToGrid(end.Y));
+
+        if (startPoint == endPoint)
+        {
+            path.Add(startPoint);
+            return true;
+        }
+
+        var blocked = BuildBlockedGridSet(startPoint, endPoint, sourceBlockId, targetBlockId, out var minX, out var maxX, out var minY, out var maxY);
+        var startState = new GridState(startPoint.X, startPoint.Y, CardinalDirection.None);
+        var queue = new PriorityQueue<GridState, double>();
+        var gScore = new Dictionary<GridState, double> { [startState] = 0 };
+        var cameFrom = new Dictionary<GridState, GridState>();
+
+        queue.Enqueue(startState, Heuristic(startPoint.X, startPoint.Y, endPoint.X, endPoint.Y));
+
+        while (queue.TryDequeue(out var current, out _))
+        {
+            if (current.X == endPoint.X && current.Y == endPoint.Y)
+            {
+                path = ReconstructGridPath(current, cameFrom);
+                return true;
+            }
+
+            if (!gScore.TryGetValue(current, out var currentScore))
+            {
+                continue;
+            }
+
+            foreach (var (dx, dy, direction) in CardinalMoves)
+            {
+                var nx = current.X + dx;
+                var ny = current.Y + dy;
+
+                if (nx < minX || nx > maxX || ny < minY || ny > maxY)
+                {
+                    continue;
+                }
+
+                var neighborPoint = new GridPoint(nx, ny);
+                if (blocked.Contains(neighborPoint) && neighborPoint != endPoint)
+                {
+                    continue;
+                }
+
+                var turnPenalty = current.Direction == CardinalDirection.None || current.Direction == direction ? 0 : 0.35;
+                var proximityPenalty = GetProximityPenalty(neighborPoint, blocked);
+                var tentative = currentScore + 1 + turnPenalty + proximityPenalty;
+
+                var neighbor = new GridState(nx, ny, direction);
+                if (gScore.TryGetValue(neighbor, out var known) && tentative >= known)
+                {
+                    continue;
+                }
+
+                cameFrom[neighbor] = current;
+                gScore[neighbor] = tentative;
+                var priority = tentative + Heuristic(nx, ny, endPoint.X, endPoint.Y);
+                queue.Enqueue(neighbor, priority);
+            }
+        }
+
+        return false;
+    }
+
+    private HashSet<GridPoint> BuildBlockedGridSet(
+        GridPoint start,
+        GridPoint end,
+        string? sourceBlockId,
+        string? targetBlockId,
+        out int minX,
+        out int maxX,
+        out int minY,
+        out int maxY)
+    {
+        var blocked = new HashSet<GridPoint>();
+
+        var allMinX = new List<int> { start.X, end.X };
+        var allMaxX = new List<int> { start.X, end.X };
+        var allMinY = new List<int> { start.Y, end.Y };
+        var allMaxY = new List<int> { start.Y, end.Y };
+
+        foreach (var block in Model.Blocks)
+        {
+            var blockMinX = ToGrid(block.X);
+            var blockMaxX = ToGrid(block.X + block.Width);
+            var blockMinY = ToGrid(block.Y);
+            var blockMaxY = ToGrid(block.Y + block.Height);
+
+            allMinX.Add(blockMinX);
+            allMaxX.Add(blockMaxX);
+            allMinY.Add(blockMinY);
+            allMaxY.Add(blockMaxY);
+
+            for (var x = blockMinX; x <= blockMaxX; x++)
+            {
+                for (var y = blockMinY; y <= blockMaxY; y++)
+                {
+                    blocked.Add(new GridPoint(x, y));
+                }
+            }
+        }
+
+        var padding = 8;
+        minX = allMinX.Min() - padding;
+        maxX = allMaxX.Max() + padding;
+        minY = allMinY.Min() - padding;
+        maxY = allMaxY.Max() + padding;
+
+        blocked.Remove(start);
+        blocked.Remove(end);
+
+        if (!string.IsNullOrWhiteSpace(sourceBlockId))
+        {
+            RemoveConnectorStubNeighborhood(sourceBlockId, start, blocked);
+        }
+
+        if (!string.IsNullOrWhiteSpace(targetBlockId))
+        {
+            RemoveConnectorStubNeighborhood(targetBlockId, end, blocked);
+        }
+
+        return blocked;
+    }
+
+    private void RemoveConnectorStubNeighborhood(string blockId, GridPoint point, HashSet<GridPoint> blocked)
+    {
+        if (TryGetBlock(blockId) is null)
+        {
+            return;
+        }
+
+        blocked.Remove(point);
+
+        foreach (var (dx, dy, _) in CardinalMoves)
+        {
+            blocked.Remove(new GridPoint(point.X + dx, point.Y + dy));
+        }
+    }
+
+    private static double GetProximityPenalty(GridPoint point, HashSet<GridPoint> blocked)
+    {
+        var adjacentBlocked = 0;
+
+        foreach (var (dx, dy, _) in CardinalMoves)
+        {
+            if (blocked.Contains(new GridPoint(point.X + dx, point.Y + dy)))
+            {
+                adjacentBlocked++;
+            }
+        }
+
+        return adjacentBlocked * 0.12;
+    }
+
+    private static List<GridPoint> ReconstructGridPath(GridState endState, Dictionary<GridState, GridState> cameFrom)
+    {
+        var route = new List<GridPoint> { new(endState.X, endState.Y) };
+        var cursor = endState;
+
+        while (cameFrom.TryGetValue(cursor, out var previous))
+        {
+            route.Add(new GridPoint(previous.X, previous.Y));
+            cursor = previous;
+        }
+
+        route.Reverse();
+        return route;
+    }
+
+    private static List<(double X, double Y)> SimplifyPolyline(List<(double X, double Y)> points)
+    {
+        if (points.Count <= 2)
+        {
+            return points;
+        }
+
+        var simplified = new List<(double X, double Y)> { points[0] };
+
+        for (var i = 1; i < points.Count - 1; i++)
+        {
+            var previous = simplified[^1];
+            var current = points[i];
+            var next = points[i + 1];
+            var sameX = Math.Abs(previous.X - current.X) < 0.001 && Math.Abs(current.X - next.X) < 0.001;
+            var sameY = Math.Abs(previous.Y - current.Y) < 0.001 && Math.Abs(current.Y - next.Y) < 0.001;
+
+            if (!sameX && !sameY)
+            {
+                simplified.Add(current);
+            }
+        }
+
+        simplified.Add(points[^1]);
+        return simplified;
+    }
+
+    private static string BuildPathData(List<(double X, double Y)> points)
+    {
+        if (points.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var segments = points
+            .Select((point, index) =>
+                index == 0
+                    ? FormattableString.Invariant($"M {point.X:0.###} {point.Y:0.###}")
+                    : FormattableString.Invariant($"L {point.X:0.###} {point.Y:0.###}"));
+
+        return string.Join(' ', segments);
+    }
+
+    private static (double X, double Y) OffsetFromSide((double X, double Y) point, DiagramConnectorSide side, double distance)
+    {
+        return side switch
+        {
+            DiagramConnectorSide.Top => (point.X, point.Y - distance),
+            DiagramConnectorSide.Right => (point.X + distance, point.Y),
+            DiagramConnectorSide.Bottom => (point.X, point.Y + distance),
+            DiagramConnectorSide.Left => (point.X - distance, point.Y),
+            _ => point
+        };
+    }
+
+    private static double Heuristic(int x, int y, int targetX, int targetY)
+    {
+        return Math.Abs(targetX - x) + Math.Abs(targetY - y);
+    }
+
+    private string GetLinkCssClass(DiagramLink link)
+    {
+        return _selectedLinkId == link.Id ? "link-line selected" : "link-line";
+    }
+
+    private string GetBlockShellStyle(DiagramBlock block)
+    {
+        return $"left:{block.X:0.###}px; top:{block.Y:0.###}px; width:{block.Width:0.###}px; height:{block.Height:0.###}px;";
+    }
+
+    private string GetBlockCssClass(DiagramBlock block)
+    {
+        var roleClass = block.Role switch
+        {
+            DiagramBlockRole.Input => " role-input",
+            DiagramBlockRole.Action => " role-action",
+            DiagramBlockRole.Output => " role-output",
+            _ => string.Empty
+        };
+
+        if (_resizingBlockId == block.Id)
+        {
+            return $"diagram-block selected resizing{roleClass}";
+        }
+
+        return _selectedBlockId == block.Id
+            ? $"diagram-block selected{roleClass}"
+            : $"diagram-block{roleClass}";
+    }
+
+    private string GetConnectorCssClass(DiagramBlock block, DiagramConnectorSide side)
+    {
+        var classes = "connector-handle";
+
+        if (_connectionDrag is not null &&
+            _connectionDrag.SourceBlockId == block.Id &&
+            _connectionDrag.SourceSide == side)
+        {
+            classes += " active";
+        }
+
+        return classes;
+    }
+
+    private string GetConnectorStyle(DiagramBlock block, DiagramConnectorSide side)
+    {
+        var halfSize = ConnectorHandleSize / 2;
+        var x = (block.Width / 2) - halfSize;
+        var y = (block.Height / 2) - halfSize;
+
+        switch (side)
+        {
+            case DiagramConnectorSide.Top:
+                y = -halfSize;
+                break;
+            case DiagramConnectorSide.Right:
+                x = block.Width - halfSize;
+                break;
+            case DiagramConnectorSide.Bottom:
+                y = block.Height - halfSize;
+                break;
+            case DiagramConnectorSide.Left:
+                x = -halfSize;
+                break;
+        }
+
+        return $"left:{x:0.###}px; top:{y:0.###}px; width:{ConnectorHandleSize:0.###}px; height:{ConnectorHandleSize:0.###}px;";
+    }
+
+    private string GetResizeHandleCssClass(DiagramBlock block)
+    {
+        return _resizingBlockId == block.Id ? "resize-handle active" : "resize-handle";
+    }
+
+    private string GetResizeHandleStyle(DiagramBlock block)
+    {
+        var halfSize = ResizeHandleSize / 2;
+        var x = block.Width - halfSize;
+        var y = block.Height - halfSize;
+        return $"left:{x:0.###}px; top:{y:0.###}px; width:{ResizeHandleSize:0.###}px; height:{ResizeHandleSize:0.###}px;";
+    }
+
+    private static string GetConnectorTitle(DiagramBlock block, DiagramConnectorSide side)
+    {
+        return $"{block.Label} - {side} connector";
+    }
+
+    private static (double X, double Y) GetConnectorPoint(DiagramBlock block, DiagramConnectorSide side)
+    {
+        var x = block.X + (block.Width / 2);
+        var y = block.Y + (block.Height / 2);
+
+        switch (side)
+        {
+            case DiagramConnectorSide.Top:
+                y = block.Y;
+                break;
+            case DiagramConnectorSide.Right:
+                x = block.X + block.Width;
+                break;
+            case DiagramConnectorSide.Bottom:
+                y = block.Y + block.Height;
+                break;
+            case DiagramConnectorSide.Left:
+                x = block.X;
+                break;
+        }
+
+        return (SnapToGrid(x), SnapToGrid(y));
+    }
+
+    private static double SnapToGrid(double value)
+    {
+        return Math.Round(value / GridSize, MidpointRounding.AwayFromZero) * GridSize;
+    }
+
+    private static int ToGrid(double value)
+    {
+        return (int)Math.Round(value / GridSize, MidpointRounding.AwayFromZero);
+    }
+
+    private static double FromGrid(int value)
+    {
+        return value * GridSize;
+    }
+
+    private static double SnapSizeToGrid(double value, double minimum)
+    {
+        var snapped = SnapToGrid(value);
+        return Math.Max(minimum, snapped);
+    }
+
+    private async Task NotifyModelChangedAsync()
+    {
+        if (ModelChanged.HasDelegate)
+        {
+            await ModelChanged.InvokeAsync(Model);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private sealed class ConnectionDragState
+    {
+        public required string SourceBlockId { get; init; }
+        public DiagramConnectorSide SourceSide { get; init; }
+        public double StartClientX { get; init; }
+        public double StartClientY { get; init; }
+        public double StartX { get; init; }
+        public double StartY { get; init; }
+        public double CurrentX { get; set; }
+        public double CurrentY { get; set; }
+    }
+
+    private enum CardinalDirection
+    {
+        None = -1,
+        Up = 0,
+        Right = 1,
+        Down = 2,
+        Left = 3
+    }
+
+    private readonly record struct GridPoint(int X, int Y);
+
+    private readonly record struct GridState(int X, int Y, CardinalDirection Direction);
+}
