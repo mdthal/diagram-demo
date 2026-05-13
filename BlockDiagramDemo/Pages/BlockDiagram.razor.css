@@ -1,7 +1,4 @@
 .block-page {
     width: 100%;
-}
-
-.subtitle {
-    max-width: 68ch;
+    min-height: 100%;
 }
