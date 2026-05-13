@@ -89,19 +89,19 @@
     color: #14532d;
 }
 
-.lane-action {
+.lane-function {
     background: linear-gradient(180deg, rgba(2, 132, 199, 0.085) 0%, rgba(2, 132, 199, 0.028) 100%);
     border-left: 1px solid rgba(2, 132, 199, 0.22);
     border-right: 1px solid rgba(2, 132, 199, 0.22);
 }
 
-.lane-action-header {
+.lane-function-header {
     background: linear-gradient(180deg, rgba(224, 242, 254, 0.98) 0%, rgba(201, 232, 250, 0.94) 100%);
     border-left: 1px solid rgba(2, 132, 199, 0.22);
     border-right: 1px solid rgba(2, 132, 199, 0.22);
 }
 
-.lane-action-header .diagram-lane-title {
+.lane-function-header .diagram-lane-title {
     color: #0c4a6e;
 }
 
@@ -202,7 +202,7 @@
     background: linear-gradient(180deg, #effdf5 0%, #d7f7e3 100%);
 }
 
-.diagram-block.role-action {
+.diagram-block.role-function {
     border-color: #3b6ea8;
     background: linear-gradient(180deg, #eef5ff 0%, #d8e8ff 100%);
 }

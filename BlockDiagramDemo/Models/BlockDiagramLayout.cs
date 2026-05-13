@@ -9,7 +9,7 @@ public static class BlockDiagramLayout
     public const double DefaultBlockWidth = 112;
     public const double DefaultBlockHeight = 48;
     public const double MinimumCanvasWidth = 512;
-    public const double MinimumActionLaneWidth = 224;
+    public const double MinimumFunctionLaneWidth = 224;
     public const double InputLaneWidth = 144;
     public const double OutputLaneWidth = 144;
     public const double LanePadding = 12;
@@ -18,10 +18,10 @@ public static class BlockDiagramLayout
     {
         canvasWidth = Math.Max(MinimumCanvasWidth, canvasWidth);
         var inputStart = 0;
-        var actionStart = inputStart + InputLaneWidth;
+        var functionStart = inputStart + InputLaneWidth;
         var outputEnd = canvasWidth;
         var outputStart = outputEnd - OutputLaneWidth;
-        var minimumOutputStart = actionStart + MinimumActionLaneWidth;
+        var minimumOutputStart = functionStart + MinimumFunctionLaneWidth;
 
         if (outputStart < minimumOutputStart)
         {
@@ -29,8 +29,8 @@ public static class BlockDiagramLayout
             outputEnd = outputStart + OutputLaneWidth;
         }
 
-        var actionWidth = outputStart - actionStart;
-        return new DiagramLaneLayout(inputStart, actionStart, outputStart, outputEnd, actionWidth);
+        var functionWidth = outputStart - functionStart;
+        return new DiagramLaneLayout(inputStart, functionStart, outputStart, outputEnd, functionWidth);
     }
 
     public static DiagramLaneHorizontalBounds GetLaneHorizontalBounds(
@@ -43,9 +43,9 @@ public static class BlockDiagramLayout
         {
             DiagramBlockRole.Input => new DiagramLaneHorizontalBounds(
                 layout.InputStart + LanePadding,
-                layout.ActionStart - LanePadding),
-            DiagramBlockRole.Action => new DiagramLaneHorizontalBounds(
-                layout.ActionStart + LanePadding,
+                layout.FunctionStart - LanePadding),
+            DiagramBlockRole.Function => new DiagramLaneHorizontalBounds(
+                layout.FunctionStart + LanePadding,
                 layout.OutputStart - LanePadding),
             DiagramBlockRole.Output => new DiagramLaneHorizontalBounds(
                 layout.OutputStart + LanePadding,
@@ -63,7 +63,7 @@ public static class BlockDiagramLayout
     {
         var existingInRole = model.Blocks.Count(block => block.Role == role);
         var ordinal = existingInRole + 1;
-        var columns = role == DiagramBlockRole.Action ? 2 : 1;
+        var columns = role == DiagramBlockRole.Function ? 2 : 1;
         var row = existingInRole / columns;
         var column = existingInRole % columns;
         var bounds = GetLaneHorizontalBounds(role, canvasWidth);
@@ -138,10 +138,10 @@ public static class BlockDiagramLayout
 
 public readonly record struct DiagramLaneLayout(
     double InputStart,
-    double ActionStart,
+    double FunctionStart,
     double OutputStart,
     double OutputEnd,
-    double ActionWidth);
+    double FunctionWidth);
 
 public readonly record struct DiagramLaneHorizontalBounds(
     double MinX,

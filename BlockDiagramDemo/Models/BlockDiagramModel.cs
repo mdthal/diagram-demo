@@ -11,7 +11,7 @@ public enum DiagramConnectorSide
 public enum DiagramBlockRole
 {
     Input,
-    Action,
+    Function,
     Output
 }
 
@@ -34,7 +34,7 @@ public sealed class DiagramBlock
 {
     public string Id { get; set; } = $"block_{Guid.NewGuid():N}";
     public string Label { get; set; } = "Block";
-    public DiagramBlockRole Role { get; set; } = DiagramBlockRole.Action;
+    public DiagramBlockRole Role { get; set; } = DiagramBlockRole.Function;
     public double X { get; set; }
     public double Y { get; set; }
     public double Width { get; set; } = 192;

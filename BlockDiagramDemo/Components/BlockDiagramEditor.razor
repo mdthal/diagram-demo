@@ -34,7 +34,7 @@
                      @onmouseup="HandleCanvasMouseUp"
                      @onmouseleave="HandleCanvasMouseLeave">
                     <div class="diagram-lane lane-input" style="@GetLaneStyle(DiagramBlockRole.Input)"></div>
-                    <div class="diagram-lane lane-action" style="@GetLaneStyle(DiagramBlockRole.Action)"></div>
+                    <div class="diagram-lane lane-function" style="@GetLaneStyle(DiagramBlockRole.Function)"></div>
                     <div class="diagram-lane lane-output" style="@GetLaneStyle(DiagramBlockRole.Output)"></div>
 
                     <div class="diagram-lane-header lane-input-header" style="@GetLaneStyle(DiagramBlockRole.Input)">
@@ -45,11 +45,11 @@
                             Add
                         </button>
                     </div>
-                    <div class="diagram-lane-header lane-action-header" style="@GetLaneStyle(DiagramBlockRole.Action)">
-                        <span class="diagram-lane-title">Process</span>
+                    <div class="diagram-lane-header lane-function-header" style="@GetLaneStyle(DiagramBlockRole.Function)">
+                        <span class="diagram-lane-title">Functions</span>
                         <button type="button"
                                 class="btn btn-sm btn-primary diagram-lane-add"
-                                @onclick="AddActionBlockAsync">
+                                @onclick="AddFunctionBlockAsync">
                             Add
                         </button>
                     </div>
@@ -111,7 +111,7 @@
                                 <span>@block.Label</span>
                             </button>
 
-                            @foreach (var side in GetVisibleConnectorSides(block))
+                            @foreach (var side in BlockDiagramConnectionRules.GetVisibleConnectorSides(block))
                             {
                                 <button type="button"
                                         class="@GetConnectorCssClass(block, side)"
@@ -200,16 +200,6 @@
         (-1, 0, CardinalDirection.Left)
     ];
 
-    private static readonly DiagramConnectorSide[] AllConnectorSides =
-    [
-        DiagramConnectorSide.Top,
-        DiagramConnectorSide.Right,
-        DiagramConnectorSide.Bottom,
-        DiagramConnectorSide.Left
-    ];
-    private static readonly DiagramConnectorSide[] InputConnectorSides = [DiagramConnectorSide.Right];
-    private static readonly DiagramConnectorSide[] OutputConnectorSides = [DiagramConnectorSide.Left];
-
     [Parameter, EditorRequired]
     public BlockDiagramModel Model { get; set; } = new();
 
@@ -256,7 +246,7 @@
 
     private string ConnectionHint =>
         _connectionDrag is null
-            ? "Valid links: Input -> Action, Action -> Action, Action -> Output"
+            ? "Valid links: Input -> Function, Function -> Function, Function -> Output"
             : "Connecting: release on a connector point";
 
     protected override void OnParametersSet()
@@ -308,7 +298,7 @@
 
     private Task AddInputBlockAsync() => AddBlockAsync(DiagramBlockRole.Input);
 
-    private Task AddActionBlockAsync() => AddBlockAsync(DiagramBlockRole.Action);
+    private Task AddFunctionBlockAsync() => AddBlockAsync(DiagramBlockRole.Function);
 
     private Task AddOutputBlockAsync() => AddBlockAsync(DiagramBlockRole.Output);
 
@@ -500,14 +490,15 @@
             return;
         }
 
-        if (!GetVisibleConnectorSides(block).Contains(side))
+        if (!BlockDiagramConnectionRules.GetVisibleConnectorSides(block).Contains(side))
         {
             return;
         }
 
-        if (!CanStartConnection(block, side, out var reason))
+        var startValidation = BlockDiagramConnectionRules.ValidateConnectionStart(block, side);
+        if (!startValidation.IsValid)
         {
-            _status = reason;
+            _status = startValidation.Reason;
             return;
         }
 
@@ -539,20 +530,6 @@
             return;
         }
 
-        if (!GetVisibleConnectorSides(targetBlock).Contains(targetSide))
-        {
-            CancelConnectionDrag("Connector is not available for this block role.");
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
-
-        if (_connectionDrag.SourceBlockId == targetBlock.Id)
-        {
-            CancelConnectionDrag("Cannot connect a block to itself.");
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
-
         var sourceBlock = TryGetBlock(_connectionDrag.SourceBlockId);
         if (sourceBlock is null)
         {
@@ -561,20 +538,15 @@
             return;
         }
 
-        if (!CanCreateConnection(sourceBlock, targetBlock, out var ruleError))
+        var validation = BlockDiagramConnectionRules.ValidateConnection(
+            Model,
+            sourceBlock,
+            _connectionDrag.SourceSide,
+            targetBlock,
+            targetSide);
+        if (!validation.IsValid)
         {
-            CancelConnectionDrag(ruleError);
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
-
-        if (Model.Links.Any(link =>
-                link.SourceBlockId == _connectionDrag.SourceBlockId &&
-                link.TargetBlockId == targetBlock.Id &&
-                link.SourceSide == _connectionDrag.SourceSide &&
-                link.TargetSide == targetSide))
-        {
-            CancelConnectionDrag("Connection already exists between those connector points.");
+            CancelConnectionDrag(validation.Reason);
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -909,83 +881,6 @@
         return Model.Links.FirstOrDefault(link => link.Id == id);
     }
 
-    private static IReadOnlyList<DiagramConnectorSide> GetVisibleConnectorSides(DiagramBlock block)
-    {
-        return block.Role switch
-        {
-            DiagramBlockRole.Input => InputConnectorSides,
-            DiagramBlockRole.Output => OutputConnectorSides,
-            _ => AllConnectorSides
-        };
-    }
-
-    private static bool CanStartConnection(DiagramBlock sourceBlock, DiagramConnectorSide side, out string reason)
-    {
-        if (sourceBlock.Role == DiagramBlockRole.Output)
-        {
-            reason = "Output blocks cannot start connections.";
-            return false;
-        }
-
-        reason = string.Empty;
-        return true;
-    }
-
-    private bool CanCreateConnection(DiagramBlock sourceBlock, DiagramBlock targetBlock, out string reason)
-    {
-        var validRolePair =
-            (sourceBlock.Role, targetBlock.Role) switch
-            {
-                (DiagramBlockRole.Input, DiagramBlockRole.Action) => true,
-                (DiagramBlockRole.Action, DiagramBlockRole.Action) => true,
-                (DiagramBlockRole.Action, DiagramBlockRole.Output) => true,
-                _ => false
-            };
-
-        if (!validRolePair)
-        {
-            reason = "Invalid route. Allowed: Input -> Action, Action -> Action, Action -> Output.";
-            return false;
-        }
-
-        if (CreatesCycle(sourceBlock.Id, targetBlock.Id))
-        {
-            reason = "Connection would create a cycle.";
-            return false;
-        }
-
-        reason = string.Empty;
-        return true;
-    }
-
-    private bool CreatesCycle(string sourceBlockId, string targetBlockId)
-    {
-        var stack = new Stack<string>();
-        var visited = new HashSet<string>(StringComparer.Ordinal);
-        stack.Push(targetBlockId);
-
-        while (stack.Count > 0)
-        {
-            var current = stack.Pop();
-            if (!visited.Add(current))
-            {
-                continue;
-            }
-
-            if (current == sourceBlockId)
-            {
-                return true;
-            }
-
-            foreach (var next in Model.Links.Where(link => link.SourceBlockId == current).Select(link => link.TargetBlockId))
-            {
-                stack.Push(next);
-            }
-        }
-
-        return false;
-    }
-
     private string GetLaneStyle(DiagramBlockRole role)
     {
         var layout = BlockDiagramLayout.GetLaneLayout(_canvasWidth);
@@ -993,7 +888,7 @@
         return role switch
         {
             DiagramBlockRole.Input => $"left:{layout.InputStart:0.###}px; width:{BlockDiagramLayout.InputLaneWidth:0.###}px;",
-            DiagramBlockRole.Action => $"left:{layout.ActionStart:0.###}px; width:{layout.ActionWidth:0.###}px;",
+            DiagramBlockRole.Function => $"left:{layout.FunctionStart:0.###}px; width:{layout.FunctionWidth:0.###}px;",
             DiagramBlockRole.Output => $"left:{layout.OutputStart:0.###}px; width:{BlockDiagramLayout.OutputLaneWidth:0.###}px;",
             _ => string.Empty
         };
@@ -1368,7 +1263,7 @@
         var roleClass = block.Role switch
         {
             DiagramBlockRole.Input => " role-input",
-            DiagramBlockRole.Action => " role-action",
+            DiagramBlockRole.Function => " role-function",
             DiagramBlockRole.Output => " role-output",
             _ => string.Empty
         };

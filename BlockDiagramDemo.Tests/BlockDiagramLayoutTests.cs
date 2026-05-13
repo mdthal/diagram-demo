@@ -11,10 +11,10 @@ public sealed class BlockDiagramLayoutTests
         var layout = BlockDiagramLayout.GetLaneLayout(320);
 
         layout.InputStart.Should().Be(0);
-        layout.ActionStart.Should().Be(BlockDiagramLayout.InputLaneWidth);
+        layout.FunctionStart.Should().Be(BlockDiagramLayout.InputLaneWidth);
         layout.OutputStart.Should().Be(368);
         layout.OutputEnd.Should().Be(BlockDiagramLayout.MinimumCanvasWidth);
-        layout.ActionWidth.Should().Be(BlockDiagramLayout.MinimumActionLaneWidth);
+        layout.FunctionWidth.Should().Be(BlockDiagramLayout.MinimumFunctionLaneWidth);
     }
 
     [Fact]
@@ -22,15 +22,15 @@ public sealed class BlockDiagramLayoutTests
     {
         var layout = BlockDiagramLayout.GetLaneLayout(800);
 
-        layout.ActionStart.Should().Be(BlockDiagramLayout.InputLaneWidth);
+        layout.FunctionStart.Should().Be(BlockDiagramLayout.InputLaneWidth);
         layout.OutputStart.Should().Be(656);
         layout.OutputEnd.Should().Be(800);
-        layout.ActionWidth.Should().Be(512);
+        layout.FunctionWidth.Should().Be(512);
     }
 
     [Theory]
     [InlineData(DiagramBlockRole.Input, 12, 132)]
-    [InlineData(DiagramBlockRole.Action, 156, 644)]
+    [InlineData(DiagramBlockRole.Function, 156, 644)]
     [InlineData(DiagramBlockRole.Output, 668, 788)]
     public void GetLaneHorizontalBounds_maps_roles_to_padded_lanes(
         DiagramBlockRole role,
@@ -71,7 +71,7 @@ public sealed class BlockDiagramLayoutTests
     {
         var block = new DiagramBlock
         {
-            Role = DiagramBlockRole.Action,
+            Role = DiagramBlockRole.Function,
             X = 900,
             Y = 12,
             Width = 119,
@@ -112,7 +112,7 @@ public sealed class BlockDiagramLayoutTests
 
     [Theory]
     [InlineData(DiagramBlockRole.Input, "Input 1", 16, 80)]
-    [InlineData(DiagramBlockRole.Action, "Action 1", 160, 80)]
+    [InlineData(DiagramBlockRole.Function, "Function 1", 160, 80)]
     [InlineData(DiagramBlockRole.Output, "Output 1", 672, 80)]
     public void CreateBlock_places_first_block_in_the_matching_lane(
         DiagramBlockRole role,
@@ -132,20 +132,20 @@ public sealed class BlockDiagramLayoutTests
     }
 
     [Fact]
-    public void CreateBlock_places_action_blocks_in_two_columns_then_next_row()
+    public void CreateBlock_places_function_blocks_in_two_columns_then_next_row()
     {
         var model = new BlockDiagramModel
         {
             Blocks =
             [
-                new DiagramBlock { Role = DiagramBlockRole.Action },
-                new DiagramBlock { Role = DiagramBlockRole.Action }
+                new DiagramBlock { Role = DiagramBlockRole.Function },
+                new DiagramBlock { Role = DiagramBlockRole.Function }
             ]
         };
 
-        var block = BlockDiagramLayout.CreateBlock(DiagramBlockRole.Action, model, 800);
+        var block = BlockDiagramLayout.CreateBlock(DiagramBlockRole.Function, model, 800);
 
-        block.Label.Should().Be("Action 3");
+        block.Label.Should().Be("Function 3");
         block.X.Should().Be(160);
         block.Y.Should().Be(224);
     }

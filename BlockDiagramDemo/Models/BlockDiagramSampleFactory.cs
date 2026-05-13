@@ -30,9 +30,9 @@ public static class BlockDiagramSampleFactory
             },
             new DiagramBlock
             {
-                Id = "action_meter_flour",
+                Id = "function_meter_flour",
                 Label = "Meter",
-                Role = DiagramBlockRole.Action,
+                Role = DiagramBlockRole.Function,
                 X = 176,
                 Y = 64,
                 Width = 112,
@@ -40,9 +40,9 @@ public static class BlockDiagramSampleFactory
             },
             new DiagramBlock
             {
-                Id = "action_meter_water",
+                Id = "function_meter_water",
                 Label = "Meter",
-                Role = DiagramBlockRole.Action,
+                Role = DiagramBlockRole.Function,
                 X = 176,
                 Y = 176,
                 Width = 112,
@@ -50,9 +50,9 @@ public static class BlockDiagramSampleFactory
             },
             new DiagramBlock
             {
-                Id = "action_mix",
+                Id = "function_mix",
                 Label = "Mix",
-                Role = DiagramBlockRole.Action,
+                Role = DiagramBlockRole.Function,
                 X = 288,
                 Y = 128,
                 Width = 112,
@@ -60,9 +60,9 @@ public static class BlockDiagramSampleFactory
             },
             new DiagramBlock
             {
-                Id = "action_divide",
+                Id = "function_divide",
                 Label = "Divide",
-                Role = DiagramBlockRole.Action,
+                Role = DiagramBlockRole.Function,
                 X = 400,
                 Y = 176,
                 Width = 112,
@@ -70,9 +70,9 @@ public static class BlockDiagramSampleFactory
             },
             new DiagramBlock
             {
-                Id = "action_bake",
+                Id = "function_bake",
                 Label = "Bake",
-                Role = DiagramBlockRole.Action,
+                Role = DiagramBlockRole.Function,
                 X = 512,
                 Y = 240,
                 Width = 112,
@@ -96,7 +96,7 @@ public static class BlockDiagramSampleFactory
             {
                 Id = "link_input_flour_meter",
                 SourceBlockId = "input_flour",
-                TargetBlockId = "action_meter_flour",
+                TargetBlockId = "function_meter_flour",
                 SourceSide = DiagramConnectorSide.Right,
                 TargetSide = DiagramConnectorSide.Left
             },
@@ -104,46 +104,46 @@ public static class BlockDiagramSampleFactory
             {
                 Id = "link_input_water_meter",
                 SourceBlockId = "input_water",
-                TargetBlockId = "action_meter_water",
+                TargetBlockId = "function_meter_water",
                 SourceSide = DiagramConnectorSide.Right,
                 TargetSide = DiagramConnectorSide.Left
             },
             new DiagramLink
             {
                 Id = "link_meter_flour_mix",
-                SourceBlockId = "action_meter_flour",
-                TargetBlockId = "action_mix",
+                SourceBlockId = "function_meter_flour",
+                TargetBlockId = "function_mix",
                 SourceSide = DiagramConnectorSide.Right,
                 TargetSide = DiagramConnectorSide.Left
             },
             new DiagramLink
             {
                 Id = "link_meter_water_mix",
-                SourceBlockId = "action_meter_water",
-                TargetBlockId = "action_mix",
+                SourceBlockId = "function_meter_water",
+                TargetBlockId = "function_mix",
                 SourceSide = DiagramConnectorSide.Right,
                 TargetSide = DiagramConnectorSide.Left
             },
             new DiagramLink
             {
                 Id = "link_mix_divide",
-                SourceBlockId = "action_mix",
-                TargetBlockId = "action_divide",
+                SourceBlockId = "function_mix",
+                TargetBlockId = "function_divide",
                 SourceSide = DiagramConnectorSide.Right,
                 TargetSide = DiagramConnectorSide.Left
             },
             new DiagramLink
             {
                 Id = "link_divide_bake",
-                SourceBlockId = "action_divide",
-                TargetBlockId = "action_bake",
+                SourceBlockId = "function_divide",
+                TargetBlockId = "function_bake",
                 SourceSide = DiagramConnectorSide.Right,
                 TargetSide = DiagramConnectorSide.Left
             },
             new DiagramLink
             {
                 Id = "link_bake_accept",
-                SourceBlockId = "action_bake",
+                SourceBlockId = "function_bake",
                 TargetBlockId = "output_accept",
                 SourceSide = DiagramConnectorSide.Right,
                 TargetSide = DiagramConnectorSide.Left
