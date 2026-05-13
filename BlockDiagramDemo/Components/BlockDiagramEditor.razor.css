@@ -2,11 +2,21 @@
     --canvas-surface: #f7f9fc;
     --canvas-grid: rgba(38, 64, 99, 0.08);
     --canvas-border: rgba(35, 58, 93, 0.22);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem;
+    background: #eef2f7;
+}
+
+.block-diagram-editor > .row {
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .diagram-canvas-shell {
+    height: 100%;
     border: 1px solid var(--canvas-border);
-    border-radius: 0.8rem;
     overflow: auto;
     background: #fff;
 }
@@ -15,7 +25,7 @@
     position: relative;
     width: 100%;
     min-width: 512px;
-    min-height: 32rem;
+    min-height: calc(100vh - 8.5rem);
     background-color: var(--canvas-surface);
     background-image:
         linear-gradient(var(--canvas-grid) 1px, transparent 1px),
@@ -282,6 +292,6 @@
 
 @media (max-width: 1199.98px) {
     .diagram-canvas {
-        min-height: 28rem;
+        min-height: calc(100vh - 8.5rem);
     }
 }
