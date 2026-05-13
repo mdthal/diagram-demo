@@ -13,80 +13,80 @@ public static class BlockDiagramSampleFactory
                 Id = "input_flour",
                 Label = "Flour",
                 Role = DiagramBlockRole.Input,
-                X = 48,
-                Y = 80,
-                Width = 128,
-                Height = 56
+                X = 16,
+                Y = 64,
+                Width = 112,
+                Height = 48
             },
             new DiagramBlock
             {
                 Id = "input_water",
                 Label = "Water",
                 Role = DiagramBlockRole.Input,
-                X = 48,
-                Y = 208,
-                Width = 128,
-                Height = 56
+                X = 16,
+                Y = 176,
+                Width = 112,
+                Height = 48
             },
             new DiagramBlock
             {
                 Id = "action_meter_flour",
                 Label = "Meter",
                 Role = DiagramBlockRole.Action,
-                X = 224,
-                Y = 80,
-                Width = 128,
-                Height = 56
+                X = 176,
+                Y = 64,
+                Width = 112,
+                Height = 48
             },
             new DiagramBlock
             {
                 Id = "action_meter_water",
                 Label = "Meter",
                 Role = DiagramBlockRole.Action,
-                X = 224,
-                Y = 208,
-                Width = 128,
-                Height = 56
+                X = 176,
+                Y = 176,
+                Width = 112,
+                Height = 48
             },
             new DiagramBlock
             {
                 Id = "action_mix",
                 Label = "Mix",
                 Role = DiagramBlockRole.Action,
-                X = 384,
-                Y = 144,
-                Width = 128,
-                Height = 56
+                X = 288,
+                Y = 128,
+                Width = 112,
+                Height = 48
             },
             new DiagramBlock
             {
                 Id = "action_divide",
                 Label = "Divide",
                 Role = DiagramBlockRole.Action,
-                X = 488,
-                Y = 144,
-                Width = 128,
-                Height = 56
+                X = 400,
+                Y = 176,
+                Width = 112,
+                Height = 48
             },
             new DiagramBlock
             {
                 Id = "action_bake",
                 Label = "Bake",
                 Role = DiagramBlockRole.Action,
-                X = 600,
-                Y = 144,
-                Width = 128,
-                Height = 56
+                X = 512,
+                Y = 240,
+                Width = 112,
+                Height = 48
             },
             new DiagramBlock
             {
                 Id = "output_accept",
                 Label = "Tortillas",
                 Role = DiagramBlockRole.Output,
-                X = 792,
-                Y = 104,
-                Width = 128,
-                Height = 56
+                X = 672,
+                Y = 240,
+                Width = 112,
+                Height = 48
             }
         ]);
 

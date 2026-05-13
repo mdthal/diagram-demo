@@ -13,8 +13,9 @@
 
 .diagram-canvas {
     position: relative;
-    min-width: 960px;
-    min-height: 38rem;
+    width: 100%;
+    min-width: 512px;
+    min-height: 32rem;
     background-color: var(--canvas-surface);
     background-image:
         linear-gradient(var(--canvas-grid) 1px, transparent 1px),
@@ -30,44 +31,81 @@
     pointer-events: none;
 }
 
-.diagram-lane span {
+.diagram-lane-header {
     position: absolute;
-    top: 0.55rem;
-    left: 0.75rem;
-    padding: 0.2rem 0.55rem;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    letter-spacing: 0.03em;
+    top: 0;
+    z-index: 3;
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem;
+    padding: 0.35rem 0.5rem;
+    border-bottom: 1px solid rgba(43, 62, 90, 0.16);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.78) inset, 0 7px 16px rgba(35, 58, 93, 0.07);
+}
+
+.diagram-lane-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #23344d;
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
     font-weight: 700;
     text-transform: uppercase;
 }
 
-.lane-input {
-    background: linear-gradient(180deg, rgba(21, 128, 61, 0.08) 0%, rgba(21, 128, 61, 0.03) 100%);
+.diagram-lane-add {
+    flex: 0 0 auto;
+    min-width: 2.7rem;
+    padding: 0.12rem 0.4rem;
+    font-size: 0.68rem;
+    font-weight: 700;
 }
 
-.lane-input span {
-    background: rgba(21, 128, 61, 0.15);
+.lane-input {
+    background: linear-gradient(180deg, rgba(21, 128, 61, 0.1) 0%, rgba(21, 128, 61, 0.035) 100%);
+    border-right: 1px solid rgba(21, 128, 61, 0.24);
+}
+
+.lane-input-header {
+    background: linear-gradient(180deg, rgba(226, 247, 234, 0.98) 0%, rgba(204, 238, 218, 0.95) 100%);
+    border-right: 1px solid rgba(21, 128, 61, 0.24);
+}
+
+.lane-input-header .diagram-lane-title {
     color: #14532d;
 }
 
 .lane-action {
-    background: linear-gradient(180deg, rgba(2, 132, 199, 0.08) 0%, rgba(2, 132, 199, 0.03) 100%);
-    border-left: 1px solid rgba(2, 132, 199, 0.25);
-    border-right: 1px solid rgba(2, 132, 199, 0.25);
+    background: linear-gradient(180deg, rgba(2, 132, 199, 0.085) 0%, rgba(2, 132, 199, 0.028) 100%);
+    border-left: 1px solid rgba(2, 132, 199, 0.22);
+    border-right: 1px solid rgba(2, 132, 199, 0.22);
 }
 
-.lane-action span {
-    background: rgba(2, 132, 199, 0.16);
+.lane-action-header {
+    background: linear-gradient(180deg, rgba(224, 242, 254, 0.98) 0%, rgba(201, 232, 250, 0.94) 100%);
+    border-left: 1px solid rgba(2, 132, 199, 0.22);
+    border-right: 1px solid rgba(2, 132, 199, 0.22);
+}
+
+.lane-action-header .diagram-lane-title {
     color: #0c4a6e;
 }
 
 .lane-output {
-    background: linear-gradient(180deg, rgba(146, 64, 14, 0.1) 0%, rgba(146, 64, 14, 0.04) 100%);
+    background: linear-gradient(180deg, rgba(146, 64, 14, 0.11) 0%, rgba(146, 64, 14, 0.035) 100%);
+    border-left: 1px solid rgba(146, 64, 14, 0.24);
 }
 
-.lane-output span {
-    background: rgba(146, 64, 14, 0.16);
+.lane-output-header {
+    background: linear-gradient(180deg, rgba(255, 244, 229, 0.98) 0%, rgba(252, 226, 194, 0.94) 100%);
+    border-left: 1px solid rgba(146, 64, 14, 0.24);
+}
+
+.lane-output-header .diagram-lane-title {
     color: #7c2d12;
 }
 
@@ -82,7 +120,7 @@
 .link-hit-target {
     fill: none;
     stroke: transparent;
-    stroke-width: 14;
+    stroke-width: 12;
     pointer-events: stroke;
     cursor: pointer;
 }
@@ -90,7 +128,7 @@
 .link-line {
     fill: none;
     stroke: #4c5d77;
-    stroke-width: 2.25;
+    stroke-width: 2;
     stroke-linejoin: round;
     stroke-linecap: round;
     pointer-events: none;
@@ -98,13 +136,13 @@
 
 .link-line.selected {
     stroke: #0d6efd;
-    stroke-width: 3;
+    stroke-width: 2.75;
 }
 
 .link-preview {
     fill: none;
     stroke: #3276d4;
-    stroke-width: 2;
+    stroke-width: 1.85;
     stroke-dasharray: 7 5;
     stroke-linejoin: round;
     stroke-linecap: round;
@@ -124,18 +162,18 @@
     width: 100%;
     height: 100%;
     border: 1px solid #617798;
-    border-radius: 0.55rem;
+    border-radius: 0.45rem;
     background: linear-gradient(180deg, #eff5ff 0%, #d8e7ff 100%);
     color: #1d2d42;
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 600;
     line-height: 1.2;
     text-align: center;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0.25rem 0.4rem;
-    box-shadow: 0 4px 14px rgba(23, 42, 70, 0.12);
+    padding: 0.2rem 0.35rem;
+    box-shadow: 0 3px 10px rgba(23, 42, 70, 0.11);
     user-select: none;
     cursor: grab;
 }
@@ -172,29 +210,42 @@
 
 .connector-handle {
     position: absolute;
-    border: 2px solid #6e82a2;
+    border: 0;
     border-radius: 999px;
-    background: #eef4ff;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85);
+    background: transparent;
     opacity: 0;
     pointer-events: none;
     padding: 0;
     cursor: crosshair;
-    transition: opacity 120ms ease, transform 120ms ease;
-    transform: scale(0.94);
+    transition: opacity 120ms ease;
+}
+
+.connector-handle::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--connector-dot-size, 10px);
+    height: var(--connector-dot-size, 10px);
+    border: 2px solid #6e82a2;
+    border-radius: 999px;
+    background: #eef4ff;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85);
+    transform: translate(-50%, -50%) scale(0.94);
+    transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
 }
 
 .diagram-block-shell:hover .connector-handle,
 .connector-handle.active {
     opacity: 1;
     pointer-events: auto;
-    transform: scale(1);
 }
 
-.connector-handle:hover,
-.connector-handle.active {
+.connector-handle:hover::before,
+.connector-handle.active::before {
     border-color: #0d6efd;
     background: #d6e7ff;
+    transform: translate(-50%, -50%) scale(1);
 }
 
 .resize-handle {
@@ -225,13 +276,12 @@
 }
 
 .status-note {
-    font-size: 0.86rem;
+    font-size: 0.8rem;
     color: #47556c;
 }
 
 @media (max-width: 1199.98px) {
     .diagram-canvas {
-        min-width: 100%;
-        min-height: 30rem;
+        min-height: 28rem;
     }
 }
