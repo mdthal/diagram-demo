@@ -1,12 +1,55 @@
+/* =========================================================
+   Block diagram editor — flat, modern design tokens
+   ========================================================= */
 .block-diagram-editor {
-    --canvas-surface: #f7f9fc;
-    --canvas-grid: rgba(38, 64, 99, 0.08);
-    --canvas-border: rgba(35, 58, 93, 0.22);
+    /* Surface */
+    --surface: #ffffff;
+    --surface-muted: #f7f8fa;
+    --canvas: #fafbfc;
+
+    /* Borders & lines */
+    --border: #e6e8ec;
+    --border-strong: #d3d7de;
+    --grid: rgba(17, 24, 39, 0.06);
+
+    /* Text */
+    --text: #0f172a;
+    --text-muted: #5b6573;
+    --text-subtle: #8a92a0;
+
+    /* Accent (selection / focus) */
+    --accent: #2563eb;
+    --accent-tint: rgba(37, 99, 235, 0.14);
+
+    /* Roles */
+    --role-input: #16a34a;
+    --role-input-bg: #f3faf5;
+    --role-input-soft: rgba(22, 163, 74, 0.12);
+
+    --role-function: #2563eb;
+    --role-function-bg: #f5f7fd;
+    --role-function-soft: rgba(37, 99, 235, 0.12);
+
+    --role-output: #c2410c;
+    --role-output-bg: #fdf6ef;
+    --role-output-soft: rgba(194, 65, 12, 0.14);
+
+    /* Shape */
+    --radius: 8px;
+    --radius-sm: 6px;
+
+    /* Elevation (very subtle) */
+    --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow-2: 0 4px 14px rgba(15, 23, 42, 0.06);
+
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.875rem;
+    color: var(--text);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    padding: 0.75rem;
-    background: #eef2f7;
+    padding: 1.25rem;
+    background: var(--surface);
 }
 
 .block-diagram-editor > .row {
@@ -14,25 +57,128 @@
     min-height: 0;
 }
 
+/* =========================================================
+   Toolbar (Bootstrap button overrides)
+   ========================================================= */
+.block-diagram-editor .btn {
+    --bs-btn-border-radius: var(--radius-sm);
+    font-weight: 500;
+    font-size: 0.8125rem;
+    letter-spacing: 0;
+    border-radius: var(--radius-sm);
+    border-width: 1px;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}
+
+.block-diagram-editor .btn-sm {
+    padding: 0.32rem 0.7rem;
+    line-height: 1.35;
+}
+
+.block-diagram-editor .btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--accent-tint);
+}
+
+.block-diagram-editor .btn:disabled,
+.block-diagram-editor .btn.disabled {
+    opacity: 0.45;
+    box-shadow: none;
+}
+
+/* Neutral / ghost buttons */
+.block-diagram-editor .btn-secondary,
+.block-diagram-editor .btn-outline-secondary,
+.block-diagram-editor .btn-outline-dark {
+    background-color: var(--surface);
+    border-color: var(--border-strong);
+    color: var(--text);
+}
+
+.block-diagram-editor .btn-secondary:hover:not(:disabled),
+.block-diagram-editor .btn-outline-secondary:hover:not(:disabled),
+.block-diagram-editor .btn-outline-dark:hover:not(:disabled) {
+    background-color: var(--surface-muted);
+    border-color: var(--text-subtle);
+    color: var(--text);
+}
+
+/* Delete: quiet danger */
+.block-diagram-editor .btn-danger {
+    background-color: var(--surface);
+    border-color: var(--border-strong);
+    color: #b91c1c;
+}
+.block-diagram-editor .btn-danger:hover:not(:disabled) {
+    background-color: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+
+/* Lane add buttons: ghost with role tint */
+.diagram-lane-add {
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.block-diagram-editor .lane-input-header .diagram-lane-add,
+.block-diagram-editor .lane-function-header .diagram-lane-add,
+.block-diagram-editor .lane-output-header .diagram-lane-add {
+    background-color: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.block-diagram-editor .lane-input-header .diagram-lane-add { color: var(--role-input); }
+.block-diagram-editor .lane-function-header .diagram-lane-add { color: var(--role-function); }
+.block-diagram-editor .lane-output-header .diagram-lane-add { color: var(--role-output); }
+
+.block-diagram-editor .lane-input-header .diagram-lane-add:hover:not(:disabled) {
+    background-color: var(--role-input-soft);
+    border-color: transparent;
+    color: var(--role-input);
+}
+.block-diagram-editor .lane-function-header .diagram-lane-add:hover:not(:disabled) {
+    background-color: var(--role-function-soft);
+    border-color: transparent;
+    color: var(--role-function);
+}
+.block-diagram-editor .lane-output-header .diagram-lane-add:hover:not(:disabled) {
+    background-color: var(--role-output-soft);
+    border-color: transparent;
+    color: var(--role-output);
+}
+
+/* =========================================================
+   Canvas
+   ========================================================= */
 .diagram-canvas-shell {
     height: 100%;
-    border: 1px solid var(--canvas-border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
     overflow: auto;
-    background: #fff;
+    background: var(--surface);
 }
 
 .diagram-canvas {
     position: relative;
     width: 100%;
     min-width: 512px;
-    min-height: calc(100vh - 8.5rem);
-    background-color: var(--canvas-surface);
-    background-image:
-        linear-gradient(var(--canvas-grid) 1px, transparent 1px),
-        linear-gradient(90deg, var(--canvas-grid) 1px, transparent 1px);
+    min-height: calc(100vh - 9rem);
+    background-color: var(--canvas);
+    background-image: radial-gradient(circle, var(--grid) 1px, transparent 1px);
     background-size: 16px 16px;
+    background-position: 0 0;
 }
 
+/* =========================================================
+   Lanes
+   ========================================================= */
 .diagram-lane {
     position: absolute;
     top: 0;
@@ -40,6 +186,10 @@
     z-index: 0;
     pointer-events: none;
 }
+
+.lane-input    { background-color: var(--role-input-bg); }
+.lane-function { background-color: var(--role-function-bg); }
+.lane-output   { background-color: var(--role-output-bg); }
 
 .diagram-lane-header {
     position: absolute;
@@ -49,76 +199,48 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.35rem;
-    padding: 0.35rem 0.5rem;
-    border-bottom: 1px solid rgba(43, 62, 90, 0.16);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.78) inset, 0 7px 16px rgba(35, 58, 93, 0.07);
+    gap: 0.5rem;
+    padding: 0.45rem 0.75rem;
+    background-color: var(--surface);
+    border-bottom: 1px solid var(--border);
+    box-shadow: none;
 }
+
+.lane-input-header    { border-right: 1px solid var(--border); }
+.lane-function-header { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+.lane-output-header   { border-left: 1px solid var(--border); }
 
 .diagram-lane-title {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: #23344d;
-    font-size: 0.68rem;
-    letter-spacing: 0.04em;
-    font-weight: 700;
+    color: var(--text-muted);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    font-weight: 600;
     text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
 }
 
-.diagram-lane-add {
-    flex: 0 0 auto;
-    min-width: 2.7rem;
-    padding: 0.12rem 0.4rem;
-    font-size: 0.68rem;
-    font-weight: 700;
+.diagram-lane-title::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 0.5rem;
+    border-radius: 999px;
+    background: var(--text-subtle);
 }
 
-.lane-input {
-    background: linear-gradient(180deg, rgba(21, 128, 61, 0.1) 0%, rgba(21, 128, 61, 0.035) 100%);
-    border-right: 1px solid rgba(21, 128, 61, 0.24);
-}
+.lane-input-header    .diagram-lane-title::before { background: var(--role-input); }
+.lane-function-header .diagram-lane-title::before { background: var(--role-function); }
+.lane-output-header   .diagram-lane-title::before { background: var(--role-output); }
 
-.lane-input-header {
-    background: linear-gradient(180deg, rgba(226, 247, 234, 0.98) 0%, rgba(204, 238, 218, 0.95) 100%);
-    border-right: 1px solid rgba(21, 128, 61, 0.24);
-}
-
-.lane-input-header .diagram-lane-title {
-    color: #14532d;
-}
-
-.lane-function {
-    background: linear-gradient(180deg, rgba(2, 132, 199, 0.085) 0%, rgba(2, 132, 199, 0.028) 100%);
-    border-left: 1px solid rgba(2, 132, 199, 0.22);
-    border-right: 1px solid rgba(2, 132, 199, 0.22);
-}
-
-.lane-function-header {
-    background: linear-gradient(180deg, rgba(224, 242, 254, 0.98) 0%, rgba(201, 232, 250, 0.94) 100%);
-    border-left: 1px solid rgba(2, 132, 199, 0.22);
-    border-right: 1px solid rgba(2, 132, 199, 0.22);
-}
-
-.lane-function-header .diagram-lane-title {
-    color: #0c4a6e;
-}
-
-.lane-output {
-    background: linear-gradient(180deg, rgba(146, 64, 14, 0.11) 0%, rgba(146, 64, 14, 0.035) 100%);
-    border-left: 1px solid rgba(146, 64, 14, 0.24);
-}
-
-.lane-output-header {
-    background: linear-gradient(180deg, rgba(255, 244, 229, 0.98) 0%, rgba(252, 226, 194, 0.94) 100%);
-    border-left: 1px solid rgba(146, 64, 14, 0.24);
-}
-
-.lane-output-header .diagram-lane-title {
-    color: #7c2d12;
-}
-
+/* =========================================================
+   Links
+   ========================================================= */
 .diagram-links {
     position: absolute;
     inset: 0;
@@ -130,62 +252,73 @@
 .link-hit-target {
     fill: none;
     stroke: transparent;
-    stroke-width: 12;
+    stroke-width: 14;
     pointer-events: stroke;
     cursor: pointer;
 }
 
 .link-line {
     fill: none;
-    stroke: #4c5d77;
-    stroke-width: 2;
+    stroke: #9aa3b2;
+    stroke-width: 1.5;
     stroke-linejoin: round;
     stroke-linecap: round;
     pointer-events: none;
+    transition: stroke 120ms ease, stroke-width 120ms ease;
 }
 
 .link-line.selected {
-    stroke: #0d6efd;
-    stroke-width: 2.75;
+    stroke: var(--accent);
+    stroke-width: 2;
 }
 
 .link-preview {
     fill: none;
-    stroke: #3276d4;
-    stroke-width: 1.85;
-    stroke-dasharray: 7 5;
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 4;
     stroke-linejoin: round;
     stroke-linecap: round;
     pointer-events: none;
 }
 
-.link-arrow-head {
-    fill: #4c5d77;
-}
+.link-arrow-head { fill: #9aa3b2; }
+.link-line.selected ~ .link-arrow-head { fill: var(--accent); }
 
+/* =========================================================
+   Blocks
+   ========================================================= */
 .diagram-block-shell {
     position: absolute;
     z-index: 2;
 }
 
 .diagram-block {
+    position: relative;
     width: 100%;
     height: 100%;
-    border: 1px solid #617798;
-    border-radius: 0.45rem;
-    background: linear-gradient(180deg, #eff5ff 0%, #d8e7ff 100%);
-    color: #1d2d42;
-    font-size: 0.72rem;
-    font-weight: 600;
-    line-height: 1.2;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.3;
     text-align: center;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0.2rem 0.35rem;
-    box-shadow: 0 3px 10px rgba(23, 42, 70, 0.11);
+    padding: 0.4rem 0.7rem 0.4rem 0.85rem;
+    box-shadow: var(--shadow-1);
     user-select: none;
     cursor: grab;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+    overflow: hidden;
+}
+
+.diagram-block:hover {
+    border-color: var(--text-subtle);
+    box-shadow: var(--shadow-2);
 }
 
 .diagram-block:active {
@@ -193,31 +326,34 @@
 }
 
 .diagram-block.selected {
-    border-color: #0d6efd;
-    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.3), 0 6px 20px rgba(13, 110, 253, 0.2);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-tint), var(--shadow-1);
 }
 
-.diagram-block.role-input {
-    border-color: #2a8a52;
-    background: linear-gradient(180deg, #effdf5 0%, #d7f7e3 100%);
+/* Role accent: thin colored stripe on the left edge */
+.diagram-block::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: transparent;
 }
 
-.diagram-block.role-function {
-    border-color: #3b6ea8;
-    background: linear-gradient(180deg, #eef5ff 0%, #d8e8ff 100%);
-}
-
-.diagram-block.role-output {
-    border-color: #ad661f;
-    background: linear-gradient(180deg, #fff5ea 0%, #ffe4c7 100%);
-}
+.diagram-block.role-input::before    { background: var(--role-input); }
+.diagram-block.role-function::before { background: var(--role-function); }
+.diagram-block.role-output::before   { background: var(--role-output); }
 
 .diagram-block.resizing {
-    border-color: #1f7a6c;
-    box-shadow: 0 0 0 2px rgba(31, 122, 108, 0.3), 0 6px 20px rgba(31, 122, 108, 0.2);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-tint);
     cursor: nwse-resize;
 }
 
+/* =========================================================
+   Connector handles
+   ========================================================= */
 .connector-handle {
     position: absolute;
     border: 0;
@@ -237,12 +373,11 @@
     top: 50%;
     width: var(--connector-dot-size, 10px);
     height: var(--connector-dot-size, 10px);
-    border: 2px solid #6e82a2;
+    border: 1.5px solid var(--border-strong);
     border-radius: 999px;
-    background: #eef4ff;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85);
-    transform: translate(-50%, -50%) scale(0.94);
-    transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+    background: var(--surface);
+    transform: translate(-50%, -50%);
+    transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
 }
 
 .diagram-block-shell:hover .connector-handle,
@@ -253,21 +388,33 @@
 
 .connector-handle:hover::before,
 .connector-handle.active::before {
-    border-color: #0d6efd;
-    background: #d6e7ff;
-    transform: translate(-50%, -50%) scale(1);
+    border-color: var(--accent);
+    background: var(--accent);
+    transform: translate(-50%, -50%) scale(1.08);
 }
 
+/* =========================================================
+   Resize handle
+   ========================================================= */
 .resize-handle {
     position: absolute;
-    border: 1px solid #4f617f;
-    border-radius: 0.25rem;
-    background: linear-gradient(135deg, #edf2fb 0%, #d5dfef 100%);
+    border: 0;
+    background: transparent;
     opacity: 0;
     pointer-events: none;
     padding: 0;
     cursor: nwse-resize;
     transition: opacity 120ms ease;
+}
+
+.resize-handle::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-right: 1.5px solid var(--text-subtle);
+    border-bottom: 1.5px solid var(--text-subtle);
+    border-bottom-right-radius: 2px;
+    transition: border-color 120ms ease;
 }
 
 .diagram-block-shell:hover .resize-handle,
@@ -276,22 +423,96 @@
     pointer-events: auto;
 }
 
-.resize-handle::before {
-    content: "";
-    position: absolute;
-    inset: 2px;
-    background:
-        linear-gradient(135deg, transparent 32%, rgba(56, 75, 105, 0.85) 32%, rgba(56, 75, 105, 0.85) 42%, transparent 42%),
-        linear-gradient(135deg, transparent 50%, rgba(56, 75, 105, 0.85) 50%, rgba(56, 75, 105, 0.85) 60%, transparent 60%);
+.resize-handle:hover::before,
+.resize-handle.active::before {
+    border-color: var(--accent);
 }
 
+/* =========================================================
+   Inspector card
+   ========================================================= */
+.block-diagram-editor .card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: none;
+}
+
+.block-diagram-editor .card.shadow-sm {
+    box-shadow: none;
+}
+
+.block-diagram-editor .card-body {
+    padding: 1rem 1.1rem;
+}
+
+.block-diagram-editor .card h2,
+.block-diagram-editor .card .h6 {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.85rem;
+}
+
+.block-diagram-editor .form-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 0.3rem;
+}
+
+.block-diagram-editor .form-control {
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-size: 0.8125rem;
+    padding: 0.4rem 0.6rem;
+    color: var(--text);
+    background-color: var(--surface);
+    box-shadow: none;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.block-diagram-editor .form-control:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-tint);
+}
+
+.block-diagram-editor .card .small {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+}
+
+.block-diagram-editor .card .small > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.15rem 0;
+}
+
+.block-diagram-editor .card .small .fw-semibold.text-dark {
+    color: var(--text-subtle) !important;
+    font-weight: 500 !important;
+}
+
+.block-diagram-editor .text-secondary {
+    color: var(--text-muted) !important;
+}
+
+/* =========================================================
+   Status line
+   ========================================================= */
 .status-note {
-    font-size: 0.8rem;
-    color: #47556c;
+    font-size: 0.75rem;
+    color: var(--text-subtle);
+    font-feature-settings: "tnum";
+    margin-top: 0.75rem;
 }
 
 @media (max-width: 1199.98px) {
     .diagram-canvas {
-        min-height: calc(100vh - 8.5rem);
+        min-height: calc(100vh - 9rem);
     }
 }
