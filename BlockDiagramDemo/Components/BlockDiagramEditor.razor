@@ -188,20 +188,9 @@
 </div>
 
 @code {
-    private const double GridSize = 16;
-    private const double MinimumBlockOffset = 48;
-    private const double MinimumBlockWidth = 64;
-    private const double MinimumBlockHeight = 48;
-    private const double DefaultBlockWidth = 112;
-    private const double DefaultBlockHeight = 48;
     private const double ConnectorHandleSize = 8;
     private const double ConnectorHitTargetSize = 24;
     private const double ResizeHandleSize = 8;
-    private const double MinimumCanvasWidth = 512;
-    private const double MinimumActionLaneWidth = 224;
-    private const double InputLaneWidth = 144;
-    private const double OutputLaneWidth = 144;
-    private const double LanePadding = 12;
 
     private static readonly (int Dx, int Dy, CardinalDirection Direction)[] CardinalMoves =
     [
@@ -250,7 +239,7 @@
     private double _resizeStartHeight;
     private ElementReference _canvasElement;
     private DotNetObjectReference<BlockDiagramEditor>? _dotNetReference;
-    private double _canvasWidth = MinimumCanvasWidth;
+    private double _canvasWidth = BlockDiagramLayout.MinimumCanvasWidth;
     private string _status = "Ready";
     private bool _showInspector;
     private bool _hasMeasuredCanvas;
@@ -276,7 +265,7 @@
 
         if (_hasMeasuredCanvas)
         {
-            ConstrainBlocksToLanes();
+            BlockDiagramLayout.ConstrainBlocksToLanes(Model, _canvasWidth);
         }
 
         if (TryGetBlock(_selectedBlockId) is null)
@@ -327,7 +316,7 @@
     {
         RecordHistoryBeforeChange();
 
-        var block = CreateNewBlock(role);
+        var block = BlockDiagramLayout.CreateBlock(role, Model, _canvasWidth);
         Model.Blocks.Add(block);
         _selectedBlockId = block.Id;
         _selectedLinkId = null;
@@ -623,8 +612,8 @@
 
             var previewRawX = _connectionDrag.StartX + (args.ClientX - _connectionDrag.StartClientX);
             var previewRawY = _connectionDrag.StartY + (args.ClientY - _connectionDrag.StartClientY);
-            _connectionDrag.CurrentX = SnapToGrid(previewRawX);
-            _connectionDrag.CurrentY = SnapToGrid(previewRawY);
+            _connectionDrag.CurrentX = BlockDiagramLayout.SnapToGrid(previewRawX);
+            _connectionDrag.CurrentY = BlockDiagramLayout.SnapToGrid(previewRawY);
 
             await InvokeAsync(StateHasChanged);
             return;
@@ -647,10 +636,12 @@
 
             var rawWidth = _resizeStartWidth + (args.ClientX - _resizeStartClientX);
             var rawHeight = _resizeStartHeight + (args.ClientY - _resizeStartClientY);
-            var snappedWidth = SnapSizeToGrid(rawWidth, MinimumBlockWidth);
-            var snappedHeight = SnapSizeToGrid(rawHeight, MinimumBlockHeight);
-            var widthBounds = GetLaneHorizontalBounds(block.Role);
-            var maxWidthInLane = Math.Max(MinimumBlockWidth, SnapToGrid(widthBounds.MaxX - block.X));
+            var snappedWidth = BlockDiagramLayout.SnapSizeToGrid(rawWidth, BlockDiagramLayout.MinimumBlockWidth);
+            var snappedHeight = BlockDiagramLayout.SnapSizeToGrid(rawHeight, BlockDiagramLayout.MinimumBlockHeight);
+            var widthBounds = BlockDiagramLayout.GetLaneHorizontalBounds(block.Role, _canvasWidth);
+            var maxWidthInLane = Math.Max(
+                BlockDiagramLayout.MinimumBlockWidth,
+                BlockDiagramLayout.SnapToGrid(widthBounds.MaxX - block.X));
             snappedWidth = Math.Min(snappedWidth, maxWidthInLane);
 
             if (Math.Abs(snappedWidth - block.Width) < 0.001 && Math.Abs(snappedHeight - block.Height) < 0.001)
@@ -685,11 +676,11 @@
 
         var blockRawX = _dragStartBlockX + (args.ClientX - _dragStartClientX);
         var blockRawY = _dragStartBlockY + (args.ClientY - _dragStartClientY);
-        var bounds = GetLaneHorizontalBounds(draggedBlock.Role);
+        var bounds = BlockDiagramLayout.GetLaneHorizontalBounds(draggedBlock.Role, _canvasWidth);
         var minX = bounds.MinX;
         var maxX = Math.Max(minX, bounds.MaxX - draggedBlock.Width);
-        var snappedX = SnapToGrid(Math.Clamp(blockRawX, minX, maxX));
-        var snappedY = SnapToGrid(Math.Max(MinimumBlockOffset, blockRawY));
+        var snappedX = BlockDiagramLayout.SnapToGrid(Math.Clamp(blockRawX, minX, maxX));
+        var snappedY = BlockDiagramLayout.SnapToGrid(Math.Max(BlockDiagramLayout.MinimumBlockOffset, blockRawY));
 
         if (Math.Abs(snappedX - draggedBlock.X) < 0.001 && Math.Abs(snappedY - draggedBlock.Y) < 0.001)
         {
@@ -849,7 +840,7 @@
         _connectionDrag = null;
         _dragStartSnapshot = null;
         _resizeStartSnapshot = null;
-        ConstrainBlocksToLanes();
+        BlockDiagramLayout.ConstrainBlocksToLanes(Model, _canvasWidth);
     }
 
     private void ToggleInspectorPanel()
@@ -885,7 +876,7 @@
 
     private bool ApplyCanvasWidth(double measuredWidth)
     {
-        var safeWidth = Math.Max(MinimumCanvasWidth, measuredWidth);
+        var safeWidth = Math.Max(BlockDiagramLayout.MinimumCanvasWidth, measuredWidth);
 
         if (_hasMeasuredCanvas && Math.Abs(_canvasWidth - safeWidth) < 1)
         {
@@ -894,7 +885,7 @@
 
         _hasMeasuredCanvas = true;
         _canvasWidth = safeWidth;
-        ConstrainBlocksToLanes();
+        BlockDiagramLayout.ConstrainBlocksToLanes(Model, _canvasWidth);
         return true;
     }
 
@@ -995,98 +986,17 @@
         return false;
     }
 
-    private DiagramBlock CreateNewBlock(DiagramBlockRole role)
-    {
-        var existingInRole = Model.Blocks.Count(block => block.Role == role);
-        var ordinal = existingInRole + 1;
-        var columns = role == DiagramBlockRole.Action ? 2 : 1;
-        var row = existingInRole / columns;
-        var column = existingInRole % columns;
-        var bounds = GetLaneHorizontalBounds(role);
-        var x = bounds.MinX + (column * (DefaultBlockWidth + GridSize));
-        var maxX = Math.Max(bounds.MinX, bounds.MaxX - DefaultBlockWidth);
-        x = Math.Min(x, maxX);
-
-        var block = new DiagramBlock
-        {
-            Id = $"{role.ToString().ToLowerInvariant()}_{Guid.NewGuid():N}",
-            Label = $"{role} {ordinal}",
-            Role = role,
-            X = SnapToGrid(x),
-            Y = SnapToGrid(72 + (row * 144)),
-            Width = DefaultBlockWidth,
-            Height = DefaultBlockHeight
-        };
-
-        ConstrainBlockToLane(block);
-        return block;
-    }
-
-    private (double MinX, double MaxX) GetLaneHorizontalBounds(DiagramBlockRole role)
-    {
-        var layout = GetLaneLayout();
-
-        return role switch
-        {
-            DiagramBlockRole.Input => (layout.InputStart + LanePadding, layout.ActionStart - LanePadding),
-            DiagramBlockRole.Action => (layout.ActionStart + LanePadding, layout.OutputStart - LanePadding),
-            DiagramBlockRole.Output => (layout.OutputStart + LanePadding, layout.OutputEnd - LanePadding),
-            _ => (layout.InputStart + LanePadding, layout.OutputEnd - LanePadding)
-        };
-    }
-
-    private void ConstrainBlockToLane(DiagramBlock block)
-    {
-        var bounds = GetLaneHorizontalBounds(block.Role);
-        var laneWidth = Math.Max(MinimumBlockWidth, bounds.MaxX - bounds.MinX);
-        var maxWidth = Math.Max(MinimumBlockWidth, SnapToGrid(laneWidth));
-        block.Width = Math.Clamp(SnapSizeToGrid(block.Width, MinimumBlockWidth), MinimumBlockWidth, maxWidth);
-        block.Height = SnapSizeToGrid(block.Height, MinimumBlockHeight);
-
-        var minX = bounds.MinX;
-        var maxX = Math.Max(minX, bounds.MaxX - block.Width);
-        block.X = SnapToGrid(Math.Clamp(block.X, minX, maxX));
-        block.Y = SnapToGrid(Math.Max(MinimumBlockOffset, block.Y));
-    }
-
-    private void ConstrainBlocksToLanes()
-    {
-        foreach (var block in Model.Blocks)
-        {
-            ConstrainBlockToLane(block);
-        }
-    }
-
     private string GetLaneStyle(DiagramBlockRole role)
     {
-        var layout = GetLaneLayout();
+        var layout = BlockDiagramLayout.GetLaneLayout(_canvasWidth);
 
         return role switch
         {
-            DiagramBlockRole.Input => $"left:{layout.InputStart:0.###}px; width:{InputLaneWidth:0.###}px;",
+            DiagramBlockRole.Input => $"left:{layout.InputStart:0.###}px; width:{BlockDiagramLayout.InputLaneWidth:0.###}px;",
             DiagramBlockRole.Action => $"left:{layout.ActionStart:0.###}px; width:{layout.ActionWidth:0.###}px;",
-            DiagramBlockRole.Output => $"left:{layout.OutputStart:0.###}px; width:{OutputLaneWidth:0.###}px;",
+            DiagramBlockRole.Output => $"left:{layout.OutputStart:0.###}px; width:{BlockDiagramLayout.OutputLaneWidth:0.###}px;",
             _ => string.Empty
         };
-    }
-
-    private (double InputStart, double ActionStart, double OutputStart, double OutputEnd, double ActionWidth) GetLaneLayout()
-    {
-        var canvasWidth = Math.Max(MinimumCanvasWidth, _canvasWidth);
-        var inputStart = 0;
-        var actionStart = inputStart + InputLaneWidth;
-        var outputEnd = canvasWidth;
-        var outputStart = outputEnd - OutputLaneWidth;
-        var minimumOutputStart = actionStart + MinimumActionLaneWidth;
-
-        if (outputStart < minimumOutputStart)
-        {
-            outputStart = minimumOutputStart;
-            outputEnd = outputStart + OutputLaneWidth;
-        }
-
-        var actionWidth = outputStart - actionStart;
-        return (inputStart, actionStart, outputStart, outputEnd, actionWidth);
     }
 
     private bool TryGetLinkPath(
@@ -1105,8 +1015,8 @@
 
         var start = GetConnectorPoint(source, link.SourceSide);
         var end = GetConnectorPoint(target, link.TargetSide);
-        var sourceExit = OffsetFromSide(start, link.SourceSide, GridSize);
-        var targetEntry = OffsetFromSide(end, link.TargetSide, GridSize);
+        var sourceExit = OffsetFromSide(start, link.SourceSide, BlockDiagramLayout.GridSize);
+        var targetEntry = OffsetFromSide(end, link.TargetSide, BlockDiagramLayout.GridSize);
 
         var route = BuildRoutedPolyline(
             source.Id,
@@ -1136,8 +1046,8 @@
         }
 
         var start = GetConnectorPoint(source, _connectionDrag.SourceSide);
-        var sourceExit = OffsetFromSide(start, _connectionDrag.SourceSide, GridSize);
-        var current = (X: SnapToGrid(_connectionDrag.CurrentX), Y: SnapToGrid(_connectionDrag.CurrentY));
+        var sourceExit = OffsetFromSide(start, _connectionDrag.SourceSide, BlockDiagramLayout.GridSize);
+        var current = (X: BlockDiagramLayout.SnapToGrid(_connectionDrag.CurrentX), Y: BlockDiagramLayout.SnapToGrid(_connectionDrag.CurrentY));
         var preview = BuildPreviewPolyline(sourceExit, current);
         preview.Insert(0, start);
         preview = SimplifyPolyline(preview);
@@ -1160,7 +1070,7 @@
         {
             foreach (var point in middlePath.Skip(1).Take(Math.Max(0, middlePath.Count - 2)))
             {
-                route.Add((FromGrid(point.X), FromGrid(point.Y)));
+                route.Add((BlockDiagramLayout.FromGrid(point.X), BlockDiagramLayout.FromGrid(point.Y)));
             }
         }
         else
@@ -1181,20 +1091,20 @@
     {
         if (TryFindGridPath(start, end, null, null, out var path))
         {
-            return path.Select(point => (FromGrid(point.X), FromGrid(point.Y))).ToList();
+            return path.Select(point => (BlockDiagramLayout.FromGrid(point.X), BlockDiagramLayout.FromGrid(point.Y))).ToList();
         }
 
         var points = new List<(double X, double Y)> { start };
 
         if (Math.Abs(start.X - end.X) >= Math.Abs(start.Y - end.Y))
         {
-            var midX = SnapToGrid((start.X + end.X) / 2);
+            var midX = BlockDiagramLayout.SnapToGrid((start.X + end.X) / 2);
             points.Add((midX, start.Y));
             points.Add((midX, end.Y));
         }
         else
         {
-            var midY = SnapToGrid((start.Y + end.Y) / 2);
+            var midY = BlockDiagramLayout.SnapToGrid((start.Y + end.Y) / 2);
             points.Add((start.X, midY));
             points.Add((end.X, midY));
         }
@@ -1212,8 +1122,8 @@
     {
         path = [];
 
-        var startPoint = new GridPoint(ToGrid(start.X), ToGrid(start.Y));
-        var endPoint = new GridPoint(ToGrid(end.X), ToGrid(end.Y));
+        var startPoint = new GridPoint(BlockDiagramLayout.ToGrid(start.X), BlockDiagramLayout.ToGrid(start.Y));
+        var endPoint = new GridPoint(BlockDiagramLayout.ToGrid(end.X), BlockDiagramLayout.ToGrid(end.Y));
 
         if (startPoint == endPoint)
         {
@@ -1297,10 +1207,10 @@
 
         foreach (var block in Model.Blocks)
         {
-            var blockMinX = ToGrid(block.X);
-            var blockMaxX = ToGrid(block.X + block.Width);
-            var blockMinY = ToGrid(block.Y);
-            var blockMaxY = ToGrid(block.Y + block.Height);
+            var blockMinX = BlockDiagramLayout.ToGrid(block.X);
+            var blockMaxX = BlockDiagramLayout.ToGrid(block.X + block.Width);
+            var blockMinY = BlockDiagramLayout.ToGrid(block.Y);
+            var blockMaxY = BlockDiagramLayout.ToGrid(block.Y + block.Height);
 
             allMinX.Add(blockMinX);
             allMaxX.Add(blockMaxX);
@@ -1551,28 +1461,7 @@
                 break;
         }
 
-        return (SnapToGrid(x), SnapToGrid(y));
-    }
-
-    private static double SnapToGrid(double value)
-    {
-        return Math.Round(value / GridSize, MidpointRounding.AwayFromZero) * GridSize;
-    }
-
-    private static int ToGrid(double value)
-    {
-        return (int)Math.Round(value / GridSize, MidpointRounding.AwayFromZero);
-    }
-
-    private static double FromGrid(int value)
-    {
-        return value * GridSize;
-    }
-
-    private static double SnapSizeToGrid(double value, double minimum)
-    {
-        var snapped = SnapToGrid(value);
-        return Math.Max(minimum, snapped);
+        return (BlockDiagramLayout.SnapToGrid(x), BlockDiagramLayout.SnapToGrid(y));
     }
 
     private async Task NotifyModelChangedAsync()
